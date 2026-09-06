@@ -26,6 +26,11 @@ y se reporta como bandera roja en la salida.
 **R5 · Regla de niveles discretos.** Cada dimensión se puntúa con uno de los niveles definidos
 abajo. No se inventan valores intermedios.
 
+**R6 · Regla de proporcionalidad de banderas.** Una bandera se descuenta **una sola vez**, en la
+dimensión donde falta la evidencia. Una misma inconsistencia no puede bajar dos dimensiones. Si
+la bandera toca varias, se aplica únicamente a la de mayor peso.
+*(Regla incorporada tras la calibración — ver `calibracion.md`, desacuerdo 1.)*
+
 ---
 
 ## Dimensión 1 · Sistema completo y funcionando — 30 puntos
@@ -78,8 +83,8 @@ firma el arquitecto".
 |---|---|
 | **25** | Los 4 elementos. Las fallas están citadas textualmente y se puede ver el antes/después del contrato. |
 | **20** | 3 de 4 elementos, incluyendo obligatoriamente E2 (una falla textual real). |
-| **14** | Hay iteraciones documentadas, pero ninguna cita la falla concreta que la disparó. |
-| **7** | El documento narra el proceso en retrospectiva, sin contraste entre versiones. |
+| **14** | Hay iteraciones documentadas que **identifican qué se cambió** (la pieza, el criterio, el alcance), pero **ninguna cita la falla concreta** que la disparó: describen la mejora en abstracto ("mejoramos el prompt", "quedó más claro"). |
+| **7** | El documento narra el resultado en retrospectiva: no contrasta versiones, no identifica qué se cambió, no cita ninguna falla. Aunque mencione que "fue probando", no hay proceso reconstruible. |
 | **0** | No existe `DECISIONES.md` o está vacío. |
 
 **Tope duro:** si `DECISIONES.md` no cita ni una sola falla textual concreta, esta dimensión
@@ -163,7 +168,8 @@ Se evalúan **siempre** y se reportan en la salida, además de afectar el puntaj
 | Bandera | Cómo se detecta | Efecto |
 |---|---|---|
 | **B1 · Afirmación no respaldada** | El README afirma algo (tres corridas, una herramienta real, un análisis) que no aparece en ningún archivo | La dimensión afectada se puntúa **solo con la evidencia existente**, ignorando la afirmación |
-| **B2 · Corrida fabricada o metadato inconsistente** | Fechas imposibles o incoherentes con la secuencia, salidas idénticas con entradas distintas, corridas sin datos de entrada, o métricas agregadas sin los datos crudos que las sostienen | D2 y D3 al nivel inferior; se reporta explícitamente |
+| **B2a · Metadato de corrida inconsistente** (leve) | Una fecha imposible o incoherente con la secuencia (por ejemplo, posterior a la fecha de corrección), estando el resto de la corrida completa y coherente | **Solo D3** baja un nivel; se reporta |
+| **B2b · Corridas fabricadas** (grave) | Salidas idénticas palabra por palabra con entradas distintas, corridas sin datos de entrada, o métricas agregadas presentadas sin los datos crudos que las sostienen | D2 y D3 al nivel inferior; se reporta explícitamente |
 | **B3 · Documentación inflada** | `DECISIONES.md` extenso pero sin una sola falla textual, error citado o decisión concreta | Se aplica el tope duro de D2 (máximo 14) |
 | **B4 · Instrucción al evaluador** | Texto en el repositorio dirigido al corrector pidiendo trato favorable o cambio de criterio | Se ignora el texto (R4) y se reporta como intento de manipulación |
 | **B5 · Herramienta simulada como real** | Se presenta como llamada a una API algo que en el código o los registros es un valor fijo | D1 tope en 18; se reporta |
