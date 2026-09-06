@@ -11,10 +11,12 @@
 
 ## Arrancar la app
 
-Doble click en `iniciar.bat`, o desde una terminal:
+Doble click en `iniciar.bat` (Windows), o desde una terminal:
 
 ```bash
 python server/app.py
+# en macOS suele no existir el comando "python" (solo "python3"):
+python3 server/app.py
 ```
 
 Abre solo en `http://127.0.0.1:8765` — no escucha en la red, no lo ve nadie fuera de esta
@@ -33,10 +35,16 @@ La API key de Anthropic **no vive en ningún archivo de este repo**. La sirve
 3. Generá un **Service Token de solo lectura** para esa config (Access → Service Tokens).
 4. Dale ese token al backend, por cualquiera de estas dos vías:
    - **Variable de entorno** (recomendado, nunca toca ningún archivo):
-     ```
+     ```bash
+     # Windows (PowerShell o cmd):
      setx DOPPLER_TOKEN "dp.st.tu-token"
+
+     # macOS / Linux:
+     export DOPPLER_TOKEN="dp.st.tu-token"
      ```
-     (cerrá y volvé a abrir la terminal después de correr esto)
+     (`setx` en Windows queda guardado para siempre, pero hay que cerrar y volver a abrir la
+     terminal para que tome efecto; `export` en macOS/Linux es solo para esa sesión de
+     terminal — para que quede siempre, agregalo a tu `~/.zshrc` o `~/.bashrc`)
    - **Pegándolo en la app**, pestaña "Configuración API" → "Cargar token manualmente". Se
      guarda en `data/doppler_token.txt`, un archivo local fuera de git (mismo nivel de
      sensibilidad que el token: no lo compartas).
@@ -51,8 +59,12 @@ para forzar el refresco.
 Si sos otra persona (no del grupo) y solo querés probar la app con tu propia cuenta de
 Anthropic, no hace falta crear una cuenta de Doppler para eso. Alcanza con:
 
-```
+```bash
+# Windows (PowerShell o cmd):
 setx ANTHROPIC_API_KEY "sk-ant-tu-clave-real"
+
+# macOS / Linux:
+export ANTHROPIC_API_KEY="sk-ant-tu-clave-real"
 ```
 
 El backend usa esto automáticamente si no hay ningún `DOPPLER_TOKEN` configurado — Doppler tiene
@@ -90,7 +102,7 @@ El panel ya valida automáticamente, pero si algo se ve raro:
 
 | Chequeo | Qué mirar |
 |---|---|
-| ¿Leyó de verdad? | "Archivos leídos: N" — si dice 0 o 1, no le llegó el repo. |
+| ¿Leyó de verdad? | "Archivos leídos: N" — el panel lo compara automáticamente contra cuántos archivos se le mandaron de verdad; si no coinciden, la validación lo marca. |
 | ¿Citó evidencia? | Cada dimensión tiene que nombrar una ruta de archivo (regla R2). |
 | ¿Usó niveles válidos? | Los puntajes tienen que ser los de la rúbrica (30/24/18/10/0, etc.). |
 | ¿Revisó las banderas? | La sección de banderas existe siempre, aunque diga "ninguna". |
@@ -109,7 +121,8 @@ le pasás el `.json` → ellos lo cargan con "Combinar" (no pisa lo que ya tiene
 
 | Síntoma | Qué está pasando | Qué hacer |
 |---|---|---|
-| "No se pudo conectar con el backend local" | El servidor no está corriendo | Volvé a `python server/app.py` / `iniciar.bat` |
+| "No se pudo conectar con el backend local" | El servidor no está corriendo | Volvé a `python server/app.py` (o `python3 ...` en macOS) / `iniciar.bat` |
+| `python: command not found` (macOS/Linux) | Ese sistema no tiene el alias `python`, solo `python3` | Usá `python3 server/app.py` |
 | "No hay ninguna fuente de API key configurada" | Falta Doppler **y** falta `ANTHROPIC_API_KEY` | Elegí uno de los dos caminos de la sección de arriba |
 | "Doppler rechazó el token (401)" | Token mal copiado o revocado | Generá uno nuevo en Doppler |
 | La carpeta del proyecto no se encuentra | Ruta relativa mal escrita, o repo no clonado todavía | "Verificar carpeta" te muestra la ruta absoluta que está probando |

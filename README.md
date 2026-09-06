@@ -93,10 +93,10 @@ no porque sea más inteligente, sino porque no se deja llevar por el tono.
 
 ## Protocolo de Evidencia — lo que agregamos después de armar una herramienta real
 
-Construimos un panel que corre el corrector contra la API real de Anthropic (vive fuera de este
-repo, en `herramientas-locales-no-subir/`, porque no es parte de lo que pide la consigna). Al
-correrlo varias veces seguidas sobre el mismo caso encontramos algo que la calibración manual no
-había mostrado: **hasta 12 puntos de variación y una bandera que aparecía y desaparecía** entre
+Construimos un panel que corre el corrector contra la API real de Anthropic (`panel-evaluador/`,
+en este mismo repo — no es parte de la entrega formal, pero se puede clonar y probar aparte, ver
+más arriba). Al correrlo varias veces seguidas sobre el mismo caso encontramos algo que la
+calibración manual no había mostrado: **hasta 12 puntos de variación y una bandera que aparecía y desaparecía** entre
 corridas idénticas — el corrector, ante un punto genuinamente ambiguo, "pensaba alrededor" de la
 regla en vez de aplicar un criterio fijo.
 

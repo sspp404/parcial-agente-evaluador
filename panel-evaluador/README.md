@@ -10,6 +10,17 @@ Se sube al repo (a diferencia de otros proyectos de la cursada) porque **no tien
 adentro**: cero API keys, cero datos de nadie. Cualquiera que clone el repo puede levantarla y
 probarla con su propia cuenta de Anthropic en un par de minutos.
 
+## Arranque rápido
+
+```bash
+git clone https://github.com/sebanazarian/parcial-agente-evaluador
+cd parcial-agente-evaluador/panel-evaluador
+python server/app.py      # macOS/Linux: python3 server/app.py
+```
+Abre solo el navegador en `http://127.0.0.1:8765`. El resto de esta página tiene el detalle
+(requisitos, cómo cargar tu API key, cómo probarla) — si preferís el paso a paso completo, andá
+a [`COMO_CORRER.md`](COMO_CORRER.md).
+
 ## Qué hace
 
 - Corre el corrector (`../agente/system_prompt.md` + `../rubrica.md`) contra un repositorio real
@@ -30,12 +41,14 @@ propia app (si no lo tenés, la app te da el comando para clonar a mano).
 
 ## Cómo correrla
 
-**Windows:** doble click en `iniciar.bat`.
+**Windows:** doble click en `iniciar.bat`, o desde una terminal: `python server/app.py`.
 
-**Cualquier sistema:**
+**macOS / Linux:**
 ```bash
-python server/app.py
+python3 server/app.py
 ```
+(en macOS y Linux normalmente no existe el comando `python` — solo `python3`; si en tu máquina
+sí existe `python` y apunta a una versión 3.10+, también sirve)
 
 Abre sola el navegador en `http://127.0.0.1:8765` — solo escucha en tu propia máquina (`127.0.0.1`),
 nunca en la red. La primera vez te pide crear una contraseña de acceso al panel: es un candado
