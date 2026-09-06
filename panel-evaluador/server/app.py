@@ -382,24 +382,26 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json({"error": "No encontrado."}, status=404)
 
     # ---------- operaciones más largas ----------
-    def _clonar_repo(self, url: str, ruta: str):
+    def _clonar_repo_interno(self, url: str, ruta: str) -> tuple[bool, str]:
+        """El clonado real, sin escribir respuesta HTTP — lo reutilizan tanto
+        el endpoint /api/fs/clone (clonado manual, un click) como
+        _correr_automatico (clonado automático de proyectos recién importados
+        por lote, que todavía no tienen la carpeta local). Devuelve
+        (ok, ruta_absoluta) o (False, mensaje_de_error)."""
         if not url:
-            self._send_json({"error": "Falta la URL del repositorio."}, status=400)
-            return
+            return False, "Falta la URL del repositorio."
         # url viene de un campo que en la práctica se llena con el link de OTRO
         # grupo (dato de terceros) — no hay que confiar en que tenga forma de URL.
         # Sin este chequeo, una cadena que empiece con "-" puede interpretarse
         # como una opción de git en vez de un repositorio (inyección de
         # argumentos: por ejemplo --upload-pack= puede ejecutar un comando).
         if not re.match(r"^(https?://|git@|ssh://)", url):
-            self._send_json({"error": "La URL tiene que empezar con https://, git@ o ssh:// — no se acepta otro formato."}, status=400)
-            return
+            return False, "La URL tiene que empezar con https://, git@ o ssh:// — no se acepta otro formato."
         destino = Path(ruta or "../trabajo-a-corregir/").expanduser()
         if not destino.is_absolute():
             destino = (CORRECTOR_DIR / destino).resolve()
         if destino.exists() and any(destino.iterdir()):
-            self._send_json({"error": f"La carpeta destino ya existe y no está vacía: {destino}"}, status=400)
-            return
+            return False, f"La carpeta destino ya existe y no está vacía: {destino}"
         destino.parent.mkdir(parents=True, exist_ok=True)
         try:
             proc = subprocess.run(
@@ -409,16 +411,20 @@ class Handler(BaseHTTPRequestHandler):
                 capture_output=True, text=True, timeout=120,
             )
         except FileNotFoundError:
-            self._send_json({"error": "No se encontró 'git' en el sistema. Cloná el repo a mano y usá el modo manual."}, status=500)
-            return
+            return False, "No se encontró 'git' en el sistema. Cloná el repo a mano y usá el modo manual."
         except subprocess.TimeoutExpired:
-            self._send_json({"error": "git clone tardó demasiado (timeout de 120s)."}, status=504)
-            return
+            return False, "git clone tardó demasiado (timeout de 120s)."
         if proc.returncode != 0:
-            self._send_json({"error": f"git clone falló: {proc.stderr.strip()[-400:]}"}, status=400)
+            return False, f"git clone falló: {proc.stderr.strip()[-400:]}"
+        return True, str(destino)
+
+    def _clonar_repo(self, url: str, ruta: str):
+        ok, resultado = self._clonar_repo_interno(url, ruta)
+        if not ok:
+            self._send_json({"error": resultado}, status=400)
             return
-        info = corrector.verificar_carpeta(str(destino), CORRECTOR_DIR)
-        self._send_json({"ok": True, "ruta": str(destino), "info": info})
+        info = corrector.verificar_carpeta(resultado, CORRECTOR_DIR)
+        self._send_json({"ok": True, "ruta": resultado, "info": info})
 
     def _correr_automatico(self, body: dict):
         project_id = body.get("projectId")
@@ -428,6 +434,18 @@ class Handler(BaseHTTPRequestHandler):
         if not proyecto:
             self._send_json({"error": "Proyecto no encontrado."}, status=404)
             return
+
+        # Un proyecto importado por URL (uno a uno o en lote, ver
+        # storage.importar_urls) todavía no tiene la carpeta local la
+        # primera vez — clonarlo acá evita que corregir 50 proyectos
+        # importados por lote exija primero clonar cada uno a mano.
+        if proyecto.get("origen") == "url" and proyecto.get("url"):
+            verificacion = corrector.verificar_carpeta(proyecto["ruta"], CORRECTOR_DIR)
+            if not verificacion["existe"]:
+                ok, resultado = self._clonar_repo_interno(proyecto["url"], proyecto["ruta"])
+                if not ok:
+                    self._send_json({"error": f"No se pudo clonar el repositorio automáticamente: {resultado}"}, status=400)
+                    return
 
         cf = corrector.cargar_archivos_corrector(CORRECTOR_DIR)
         if not cf:

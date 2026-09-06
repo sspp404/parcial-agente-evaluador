@@ -46,11 +46,18 @@ def _iter_todos_los_archivos(root: Path):
 
 
 def _iter_archivos(root: Path):
-    """Compat: archivos legibles en todo el árbol (lo usa verificar_carpeta,
-    que solo necesita un conteo aproximado, no decide qué se envía al modelo)."""
+    """Archivos legibles Y relevantes (lo usa verificar_carpeta, el chequeo
+    previo que ve el usuario antes de correr). Antes contaba cualquier archivo
+    legible del repositorio entero, así que una carpeta con código fuente pero
+    sin README.md/DECISIONES.md/prompts/corridas mostraba "✓ N archivos
+    legibles" y después construir_dump igual devolvía count=0 (la carpeta
+    "no tiene archivos legibles") al correr de verdad — el chequeo tiene que
+    mirar lo mismo que se va a enviar, no una definición más laxa."""
     for p in _iter_todos_los_archivos(root):
         if p.suffix.lower() in EXT_LEGIBLES:
-            yield p
+            rel = p.relative_to(root).as_posix()
+            if _es_contenido_requerido(rel):
+                yield p
 
 
 def _resolver(ruta: str, base: Path) -> Path:
