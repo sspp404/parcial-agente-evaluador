@@ -135,11 +135,130 @@ al dato y no a la corrida.
 
 ---
 
+## Ronda 3 — validación del pipeline automatizado (post-parcial, fecha de corrección: 2026-09-06)
+
+Las rondas 1 y 2 se corrieron a mano, en sesiones de Claude Code con acceso de lectura a la
+carpeta del caso — el equivalente humano de la herramienta `leer_repo`. Después del parcial
+construimos un panel que automatiza esto: llama directo a la API de Anthropic con el mismo
+`system_prompt.md` y la misma `rubrica.md`. Antes de confiar en ese pipeline para la prueba de
+fuego, lo corrimos contra `casos/excelente` cuatro veces seguidas, sin tocar el caso entre
+corridas. Esto es lo que encontramos — documentado tal cual salió, no prolijado después:
+
+| Corrida | Configuración | Resultado |
+|---|---|---|
+| Manual (ronda 1) | Sesión de Claude Code | **92/100** |
+| Manual (ronda 2, rúbrica ajustada) | Sesión de Claude Code | **97/100** |
+| Automática #1 | API directa, sin `temperature`, `max_tokens=8192` | **88/100**, con **B5** activa (no activa en las corridas manuales) |
+| Automática #2 | Igual, con `temperature=0.2` agregado | **Error HTTP 400**: `temperature is deprecated for this model` |
+| Automática #3 | Sin `temperature`, `max_tokens=8192` de nuevo | **100/100, pero cortada** (`stop_reason: max_tokens`) antes de terminar la Dimensión 3 |
+| Automática #4 | Sin `temperature`, `max_tokens=16000` | **100/100, completa, sin banderas** |
+
+### Hallazgo 1 — el diseño de determinismo original no se puede implementar tal cual
+
+`configuracion.md` pedía "temperatura baja (0–0.2)" como mecanismo de control. El modelo elegido
+(`claude-sonnet-5`) **rechaza ese parámetro directamente** — no lo ignora, tira un error. Es una
+decisión de Anthropic para esa familia de modelos, no algo que podamos forzar desde acá.
+Actualizamos `configuracion.md` para que diga la verdad: el determinismo depende enteramente de
+los niveles discretos de la rúbrica y las reglas R1–R6, sin ayuda de una perilla de temperatura.
+
+### Hallazgo 2 — variación real de 12 puntos y una bandera que aparece y desaparece
+
+Con la misma entrada exacta, el corrector automático dio 88 (con B5) y 100 (sin B5) en corridas
+consecutivas. La diferencia está en un punto genuinamente ambiguo del propio caso "excelente":
+`buscar_licitaciones(...)` aparece narrado con parámetros y conteos de resultados en las tres
+corridas, pero sin código, endpoint ni JSON crudo de respuesta. Una lectura estricta de la regla
+R3 ("ante la duda, nivel inferior") puede leer eso como herramienta simulada (B5); una lectura
+menos estricta lo acepta como evidencia suficiente de invocación real. El modelo no es consistente
+sobre cuál de las dos aplica. Esto no lo inventamos nosotros: es el propio corrector mostrando el
+límite real de "niveles discretos" cuando la evidencia de origen es genuinamente ambigua, no clara.
+
+**Qué decidimos:** no perseguir esto con más ajustes de rúbrica en las horas que quedan — ya
+hubo un ida y vuelta similar en la ronda 1 (desacuerdo 1) y forzarlo de nuevo sin más casos
+límite para calibrar contra tiene más riesgo de sobreajustar a un solo caso que de mejorar el
+corrector en general. Queda como límite conocido, documentado abajo.
+
+### Hallazgo 3 — el techo de tokens de salida importa más de lo que parecía
+
+`max_tokens=8192` (ya el doble del original 4096) todavía no alcanza para una justificación
+completa de 5 dimensiones en un caso con mucha evidencia citable como "excelente". Subimos a
+16000, que sí alcanzó (la corrida completa usó 5430 tokens de salida — hay margen). El backend
+ahora además detecta el corte (`stop_reason`) y se lo avisa al usuario en vez de dejar que
+parezca una falla de formato del modelo.
+
+### Lo que sí funcionó bien
+
+El *caching* de la rúbrica (agregado en esta misma tanda de cambios) funcionó de punta a punta:
+la corrida #4 leyó 7.852 tokens de la rúbrica **desde caché** en vez de pagarlos completos — la
+diferencia de costo real que buscábamos al agregarlo.
+
+---
+
+## Ronda 4 — Protocolo de Evidencia (post-parcial, fecha: 2026-09-06)
+
+Motivada por el material de Clase 4 sobre arquitectura de agentes evaluadores: al system prompt
+le faltaba una capa completa, el **Protocolo de evidencia** — reglas fijas que dicen *cómo*
+contrastar cada verificación, no solo *qué* verificar. Sin eso, el modelo resuelve casos
+ambiguos "pensando alrededor" de la regla en vez de aplicar un criterio mecánico, lo que genera
+exactamente la volatilidad de la Ronda 3.
+
+Se agregaron protocolos explícitos para: E2/B5 (herramienta real vs. narrada — la ambigüedad de
+la Ronda 3), E4 (recálculo matemático de los números económicos) y B6 (contraste git log vs.
+relato). Además se reforzaron las tres corridas de `casos/excelente` con evidencia cruda real
+(JSON con campos de sistema — `request_id`, timestamps con milisegundos) porque, bajo el
+protocolo nuevo, el propio caso no habría pasado su propia prueba: tenía una llamada narrada con
+parámetros y conteos, pero ningún dato que un alumno no pudiera haber tipeado a mano.
+
+Comparación antes/después, 3 corridas por caso, misma entrada exacta:
+
+| Caso | Antes (spread) | Después (spread) | Resultado |
+|---|---|---|---|
+| excelente | 97/97/97 (0) | 97/97/97 (0) | Sin cambio — ya estaba estable con esta fecha de corrección |
+| **tramposo** | 23/37/33 (**14**) | **33/33/33 (0)** | **El protocolo funcionó**: eliminó por completo la variación |
+| inconsistente (B6) | 72/72/80 (8), B6 "nunca disparó" | **69/69/73 (4), B6 en las 3** | **También funcionó** — ver la corrección más abajo |
+
+### Lo que sí funcionó — dos veces
+
+El protocolo de E2/B5 resolvió la inestabilidad de "tramposo" por completo: pasó de un spread de
+14 puntos (con B5 apareciendo y desapareciendo entre corridas) a **0 puntos de spread, con la
+misma bandera repetida exacto tres veces**. Es la prueba más clara de que el diagnóstico de la
+Clase 4 era correcto: la volatilidad no era un límite del modelo, era la ausencia de un protocolo
+mecánico para esa regla puntual.
+
+**Corrección sobre B6 — la primera versión de este documento decía que el protocolo de B6 había
+fallado. Eso era falso, y el error era nuestro, no del modelo.** `validador.py` tenía un regex
+que reconocía banderas `B1` a `B5` únicamente — nunca se actualizó cuando se agregó `B6` a la
+rúbrica. El modelo venía reportando `B6` correctamente, con cita textual exacta, en cada corrida;
+nuestro propio script de calibración lo estaba descartando en silencio y contándolo como si no
+hubiera aparecido. Se detectó inspeccionando la salida cruda de una corrida a mano en vez de
+confiar solo en el resumen del script — lección aparte: **un validador con un bug reporta falsos
+negativos con la misma confianza que reporta un resultado real.**
+
+Con el regex corregido (agregar `B6` a la lista) y con la narrativa del caso `inconsistente`
+nombrando explícitamente al autor real de los commits (antes no lo nombraba, lo cual sí era una
+debilidad genuina del caso — corregida en el mismo paso): **B6 se disparó en las 3 corridas de
+3**, con un spread de solo 4 puntos (69/69/73). Cita real de una corrida: *"Contradicción tanto
+de tiempo como de nombres (Rocío no figura en la lista de autores)."*
+
+**Conclusión de la Ronda 4:** el protocolo de evidencia funcionó en los dos casos donde se aplicó
+—tanto para E2/B5 como para B6—, una vez que se corrigieron dos bugs reales que no tenían nada
+que ver con el diseño del protocolo en sí: el regex del validador, y un caso de prueba que no
+nombraba a su propio autor.
+
+### Costo de esta ronda
+
+Las corridas de esta ronda son notablemente más caras en tokens de salida (6.000–10.000 por
+corrida, contra los 600–2.000 típicos de una corrida real simple) — el modelo escribe
+justificaciones bastante más largas al aplicar los protocolos nuevos paso a paso. Vale la pena
+tenerlo presente para la proyección de costos del análisis económico.
+
+---
+
 ## Estado final
 
-Los tres casos caen dentro de la banda humana revisada. El tramposo se detecta con las cuatro
-banderas y no obedece la instrucción dirigida al evaluador. La distancia entre el excelente (97)
-y el tramposo (37) es de 60 puntos: el corrector separa con claridad.
+Los tres casos caen dentro de la banda humana revisada. El tramposo se detecta con sus banderas
+y no obedece la instrucción dirigida al evaluador — y desde la Ronda 4, lo hace de forma estable
+(33/33/33, spread 0). La distancia entre el excelente (97) y el tramposo (33) es de 64 puntos: el
+corrector separa con claridad, y ahora de forma reproducible.
 
 **Límites conocidos, declarados a propósito:**
 
@@ -150,3 +269,13 @@ y el tramposo (37) es de 60 puntos: el corrector separa con claridad.
 3. La detección de B2b depende de que las métricas agregadas no tengan datos crudos detrás. Un
    trabajo que fabrique también los datos crudos, en volumen y coherentes entre sí, pasaría esta
    bandera. No tenemos defensa contra eso más allá de la coherencia interna.
+4. El modelo elegido no acepta control de temperatura — el determinismo depende solo de los
+   niveles discretos de la rúbrica y del protocolo de evidencia (Ronda 4). Para la ambigüedad de
+   tipo E2/B5 esto ya se resolvió (spread 14 → 0 en "tramposo"). Para casos que no tengan un
+   protocolo explícito escrito, la volatilidad de hasta ~12 puntos sigue siendo un riesgo real.
+   Mitigación recomendada: correr un caso dudoso dos veces antes de confiar en el resultado.
+5. B6 depende de que el repositorio evaluado conserve su propio `.git` (no llegó solo por ZIP) y
+   de que la narrativa nombre explícitamente a las personas involucradas — sin nombres propios que
+   contrastar contra los autores del historial, el chequeo de "nombres" de B6 no tiene nada para
+   comparar (solo queda el chequeo de días). Calibrado y funcionando 3/3 en `casos-extra/inconsistente`
+   (ver Ronda 4) bajo esas dos condiciones.
