@@ -97,7 +97,9 @@ hacer si algo se traba.
 
 - `data/` — tus propios proyectos, correcciones guardadas y contraseña quedan solo en tu disco,
   nunca se suben (está en `.gitignore`).
-- `casos-extra/` — casos de prueba adicionales que usamos para calibrar internamente (incluyen
-  su propio historial de `git` de prueba); no son parte de los tres casos oficiales del parcial
-  y quedan fuera del repo.
 - Cualquier API key, token o dato de una corrida real de clientes.
+
+`casos-extra/` **sí** se versiona ahora, en la raíz del repositorio: son los casos que cubren las
+banderas que los tres oficiales no ejercitan (B4 por ocultamiento, B6) y la zona intermedia de la
+rúbrica. Estaban afuera, y eso hacía que sus filas en `calibracion.md` no se pudieran verificar
+abriendo un archivo. El caso de B6 ya no trae un `.git` anidado: trae el script que lo genera.

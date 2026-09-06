@@ -197,6 +197,68 @@ def test_parser_tolera_el_formato_del_modelo():
           str(r2["dims"]))
 
 
+def test_casos_extra_ejercitan_lo_que_prometen():
+    """Los tres casos oficiales daban CERO alertas mecánicas: la capa forense
+    anti-inyección no tenía un solo caso que la probara, y el caso de B6 estaba
+    fuera del repositorio."""
+    print("\nCasos extra · cobertura de banderas mecánicas")
+    extra = REPO / "casos-extra"
+    for caso in ("oculto", "inconsistente", "intermedio"):
+        check(f"{caso}/ existe y está versionado", (extra / caso).is_dir())
+
+    obligatorios = ["README.md", "DECISIONES.md", "prompts/system_prompt.md", "corridas/corrida_1.md"]
+    for caso in ("oculto", "inconsistente", "intermedio"):
+        faltan = [f for f in obligatorios if not (extra / caso / f).exists()]
+        check(f"{caso}/ respeta la estructura obligatoria", not faltan, str(faltan))
+
+    dump = corrector.construir_dump(str(extra / "oculto"), REPO)
+    tipos = {a["tipo"] for a in dump["alertasSeguridad"]}
+    for esperado in ("comentario_html", "caracter_invisible", "homoglifo", "suplantacion_de_herramienta"):
+        check(f"oculto/ dispara {esperado}", esperado in tipos, str(sorted(tipos)))
+
+    for honesto in ("inconsistente", "intermedio"):
+        d = corrector.construir_dump(str(extra / honesto), REPO)
+        check(f"{honesto}/ no dispara ninguna alerta (control negativo)",
+              len(d["alertasSeguridad"]) == 0, str(d["alertasSeguridad"]))
+
+    check("oculto/ documenta sus trampas para auditoría", (extra / "oculto" / "TRAMPAS.md").exists())
+    check("TRAMPAS.md no se le envía al corrector",
+          "TRAMPAS.md" not in dump["text"] and "TRAMPAS.md" in dump["listado"])
+
+
+def test_caso_b6_materializa_su_historial():
+    """El caso de B6 vivía fuera del repo porque traía un `.git` anidado. Ahora
+    trae el script que lo genera, así el caso se versiona como texto."""
+    print("\nCasos extra · el caso de B6 genera su propio historial")
+    origen = REPO / "casos-extra" / "inconsistente"
+    script = origen / "crear_historial.sh"
+    check("crear_historial.sh existe", script.exists())
+    if not script.exists():
+        return
+    check("el caso NO trae un .git anidado versionado", not (origen / ".git").exists())
+
+    with tempfile.TemporaryDirectory() as tmp:
+        import shutil
+        d = Path(tmp) / "inconsistente"
+        shutil.copytree(origen, d)
+        r = subprocess.run(["bash", "crear_historial.sh"], cwd=d, capture_output=True, text=True)
+        check("el script corre sin error", r.returncode == 0, r.stderr[-200:])
+        g = forense.leer_historial_git(d)
+        check("produce un historial legible", g is not None)
+        if g:
+            check("el historial contradice el relato: un solo día", g["diasDeSpread"] == 0, str(g["diasDeSpread"]))
+            check("el historial contradice el relato: un solo autor", len(g["autores"]) == 1, str(g["autores"]))
+            texto = (origen / "DECISIONES.md").read_text()
+            check("DECISIONES.md afirma semanas de trabajo (material para la prueba de tiempo)",
+                  "tres semanas" in texto)
+            colaboradora = "Rocío Almirón"
+            check("DECISIONES.md nombra a una colaboradora ausente del historial (prueba de nombres)",
+                  colaboradora in texto and colaboradora not in g["autores"])
+        r2 = subprocess.run(["bash", "crear_historial.sh"], cwd=d, capture_output=True, text=True)
+        g2 = forense.leer_historial_git(d)
+        check("el script es idempotente", r2.returncode == 0 and g2 and g2["commits"] == g["commits"])
+
+
 def test_import_de_backup_no_inyecta():
     """Un backup .json es un archivo que el usuario elige de su disco; se
     guardaba tal cual y el frontend lo interpolaba en el HTML."""
@@ -213,7 +275,8 @@ if __name__ == "__main__":
     for t in (test_b6_no_se_fabrica_con_clon_superficial, test_b6_detecta_fechas_retroactivas,
               test_el_recorte_no_saltea_el_escaneo, test_forense_distingue_ataque_de_notacion,
               test_dump_encuentra_la_entrega_en_subcarpeta, test_dump_no_deja_cerrar_el_bloque,
-              test_parser_tolera_el_formato_del_modelo, test_import_de_backup_no_inyecta):
+              test_parser_tolera_el_formato_del_modelo, test_casos_extra_ejercitan_lo_que_prometen,
+              test_caso_b6_materializa_su_historial, test_import_de_backup_no_inyecta):
         t()
     print()
     if fallas:

@@ -28,4 +28,8 @@ Lo decimos explícitamente porque es exactamente la bandera **B1** de nuestra pr
 afirmación que los archivos no sostienen— y sería incoherente aplicarle a los demás una vara que
 no nos aplicamos. Las rondas que sustentan el parcial (1 y 2) sí tienen su salida cruda arriba.
 
-Pendiente concreto: que `calibrar.py` escriba `correcciones/ronda<N>/<caso>_<corrida>.md`.
+**Resuelto tras la auditoría.** `calibrar.py` ahora guarda cada salida cruda, sin editar, en
+`correcciones/corrida_<AAAAMMDD-HHMM>/<caso>_<n>.md`, con una cabecera que registra el caso, la
+fecha de corrección, el modelo, los tokens y el `stop_reason`. La próxima ronda deja evidencia
+sola. Lo que no se puede reconstruir hacia atrás son las 22 corridas de las rondas 3 y 4: esas
+salidas se perdieron y la única forma honesta de recuperarlas es volver a correrlas.

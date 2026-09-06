@@ -21,8 +21,10 @@ cuando el cliente vuelve a escribir enojado, no antes.
   `prompts/user_prompt.md` (Contexto, Tarea).
 - **Herramienta real:** la API del helpdesk (Zammad, instancia propia de la empresa). El agente
   arma la consulta con la ventana de fechas del contexto, la ejecuta y trabaja sobre los tickets
-  que devuelve. La respuesta cruda de cada llamada está pegada sin editar en cada archivo de
-  `corridas/`.
+  que devuelve. En cada archivo de `corridas/` está pegada, sin editar, la respuesta cruda de esa
+  llamada: el encabezado completo (`request_id`, `generated_at`, `query`, `total_count`) más los
+  primeros tickets del arreglo. No pegamos los 52 o 38 tickets enteros por largo; los que están,
+  están tal cual volvieron.
 - **Salida estructurada:** tabla de reclamos fuera de SLA o por vencer + tabla resumen por
   categoría + línea de trazabilidad con la consulta usada.
 - **Corridas:** tres, en `corridas/`, con la entrada, la respuesta cruda de la herramienta y la
@@ -81,7 +83,8 @@ nunca el medio de pago.
 
 1. *Reclamo mal categorizado hacia abajo.* Un reclamo de `logistica` (SLA 24 h) clasificado como
    `uso` (SLA 72 h) desaparece de la lista de vencidos por dos días. Nos pasó en la corrida 2 con
-   `RCL-4462`, aunque por otro motivo (ver `DECISIONES.md`).
+   `RCL-4466`: quedó en `uso` sin decir nada, y recién en la corrida 3 salió como
+   `sin_clasificar` (ver `corridas/corrida_3.md` y `DECISIONES.md`, iteración 2).
 2. *Reclamo textualmente ambiguo.* "Vino fallado" puede ser garantía o daño en el traslado, y la
    diferencia son 24 horas de SLA. El texto del cliente no siempre alcanza para decidir.
 3. *Datos personales en el cuerpo del reclamo.* Los clientes escriben teléfono y a veces dirección

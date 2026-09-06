@@ -48,10 +48,16 @@ CASOS = [
      "fecha": "2026-09-02", "banda": (40, 54), "banderas_esperadas": ["B1"]},
     {"nombre": "tramposo", "ruta": CORRECTOR_DIR / "casos" / "tramposo",
      "fecha": "2026-09-02", "banda": (0, 45), "banderas_esperadas": ["B1", "B2b", "B3", "B4"]},
-    {"nombre": "inconsistente (nuevo — prueba B6)", "ruta": CASOS_EXTRA / "inconsistente",
-     "fecha": "2026-09-06", "banda": (50, 95), "banderas_esperadas": ["B6"]},
-    {"nombre": "oculto (nuevo — prueba B4 mecánico)", "ruta": CASOS_EXTRA / "oculto",
-     "fecha": "2026-09-06", "banda": (0, 100), "banderas_esperadas": ["B4"]},
+    # Casos extra: cubren las banderas que los tres oficiales no ejercitan y la
+    # zona intermedia de la rúbrica, donde van a caer la mayoría de los trabajos
+    # reales de la prueba de fuego. Nombres sin paréntesis: se usan como nombre
+    # de archivo al guardar la salida cruda.
+    {"nombre": "inconsistente", "ruta": CASOS_EXTRA / "inconsistente",
+     "fecha": "2026-09-06", "banda": (55, 85), "banderas_esperadas": ["B6"]},
+    {"nombre": "oculto", "ruta": CASOS_EXTRA / "oculto",
+     "fecha": "2026-09-06", "banda": (40, 75), "banderas_esperadas": ["B4"]},
+    {"nombre": "intermedio", "ruta": CASOS_EXTRA / "intermedio",
+     "fecha": "2026-09-06", "banda": (68, 84), "banderas_esperadas": []},
 ]
 
 
@@ -81,7 +87,11 @@ def main():
         try:
             dump = corrector.construir_dump(str(caso["ruta"]), CORRECTOR_DIR)
         except corrector.RutaInvalida as e:
-            print(f"  ERROR: {e}\n")
+            # Un caso declarado cuya carpeta no está es una falla, no un aviso.
+            # Es exactamente lo que pasaba con casos-extra/: calibracion.md
+            # reportaba resultados de un caso que no estaba en el repositorio.
+            print(f"  ✗ FALLA · carpeta ausente: {e}\n")
+            fallas.append(f"{caso['nombre']}: la carpeta del caso no existe ({caso['ruta']})")
             continue
 
         notas, banderas_vistas, fuera_de_banda, truncadas, invalidas = [], set(), [], 0, 0

@@ -216,12 +216,17 @@ Comparación antes/después, 3 corridas por caso, misma entrada exacta:
 | **tramposo** | 23/37/33 (**14**) | **33/33/33 (0)** | **El protocolo funcionó**: eliminó por completo la variación |
 | inconsistente (B6) | 72/72/80 (8), B6 "nunca disparó" | **69/69/73 (4), B6 en las 3** | **También funcionó** — ver la corrección más abajo |
 
-> **Nota sobre el caso `inconsistente`.** No está en este repositorio: vive en
-> `panel-evaluador/casos-extra/`, excluido por `.gitignore` porque incluye su propio historial de
-> `git` de prueba y un repo anidado ensucia el árbol. Es un caso interno de calibración, no uno de
-> los tres oficiales del parcial. Consecuencia honesta: **esta fila no se puede verificar abriendo
-> un archivo de este repo**, a diferencia de las otras dos. Queda declarado en vez de presentado
-> como si fuera reproducible.
+> **Nota sobre el caso `inconsistente`.** Cuando se escribió esta ronda, el caso vivía fuera del
+> repositorio (`panel-evaluador/casos-extra/`, en `.gitignore`) porque traía su propio `.git` de
+> prueba y un repo anidado ensucia el árbol. Con lo cual esta fila afirmaba un resultado que nadie
+> podía verificar abriendo un archivo — la bandera **B1** de nuestra propia rúbrica.
+>
+> **Corregido tras la auditoría.** El caso está ahora en [`casos-extra/inconsistente/`](casos-extra/inconsistente/),
+> versionado, y ya no trae un `.git`: trae [`crear_historial.sh`](casos-extra/inconsistente/crear_historial.sh),
+> que lo genera. Así el caso se versiona como texto y el historial se materializa cuando hace falta.
+> Lo que sigue faltando y no vamos a disimular: **los números de esta fila son de aquellas corridas,
+> y no se volvieron a correr con la rúbrica actual.** El caso es reproducible; el resultado
+> concreto de esta tabla, todavía no.
 
 ### Lo que sí funcionó — dos veces
 
@@ -285,4 +290,8 @@ corrector separa con claridad, y ahora de forma reproducible.
    de que la narrativa nombre explícitamente a las personas involucradas — sin nombres propios que
    contrastar contra los autores del historial, el chequeo de "nombres" de B6 no tiene nada para
    comparar (solo queda el chequeo de días). Calibrado y funcionando 3/3 en `casos-extra/inconsistente`
-   (ver Ronda 4) bajo esas dos condiciones.
+   (ver Ronda 4) bajo esas dos condiciones — el caso está ahora versionado en el repo.
+   **Endurecido tras la auditoría:** `%aI` y `%an` los elige quien commitea, así que un historial
+   "largo y grupal" se fabricaba con dos variables de entorno. Ahora `forense` lee también `%cI` y
+   `%cn`, y avisa cuando las fechas de autor se reparten en semanas mientras las de committer caen
+   todas el mismo día — el patrón de un historial escrito de una sentada hacia atrás.
