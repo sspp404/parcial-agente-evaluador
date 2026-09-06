@@ -9,12 +9,10 @@
 | Sebastian Nazarian | Diseño de la rúbrica ejecutable y del contrato del corrector, los tres casos de prueba, las cuatro rondas de calibración y el panel evaluador. Autor de los commits `3d9a…`–`983d21d`. |
 | Santiago Paris | Auditoría del corrector previa a la prueba de fuego y corrección de los hallazgos: clon superficial que falseaba B6, filtro del dump, falsos positivos del escaneo forense, fuga del delimitador, tolerancia del parser y bugs del panel. Autor de los commits de la rama `fix/auditoria-pre-prueba-de-fuego`. |
 
-**Sobre el historial de commits.** Hasta el 2026-09-06 el repositorio tiene un solo autor: la
-construcción se hizo en sesiones de trabajo conjunto sobre una máquina, y quedó firmada por quien
-la tenía adelante. La auditoría posterior sí está commiteada por su autor. Lo decimos porque un
-trabajo cuya tesis es *puntuar solo lo verificable* no puede pedir que se le crea un reparto que
-su propio historial no muestra — y porque preferimos declararlo a simularlo con co-autorías
-retroactivas.
+**Sobre el historial de commits.** Los commits hasta el 2026-09-06 tienen un solo autor,
+Sebastian Nazarian; los de la auditoría posterior, Santiago Paris. <!-- PENDIENTE: completar acá
+cómo se repartió efectivamente el trabajo en esa primera etapa. Tiene que escribirlo alguien del
+grupo: es un hecho sobre cómo trabajaron, no algo que se deduzca del repositorio. -->
 
 ## Qué construimos
 

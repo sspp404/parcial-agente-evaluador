@@ -20,9 +20,12 @@ corrección, distinto puntaje.
 
 ## Qué NO está en esta carpeta
 
-**Las rondas 3 y 4 no tienen salidas crudas guardadas acá.** Se corrieron con
-`panel-evaluador/server/calibrar.py`, que imprime a la consola y no persiste nada: las 22 corridas
-que `calibracion.md` describe existieron, pero su evidencia quedó en stdout y no en el repositorio.
+**Las rondas 3 y 4 no tienen salidas crudas guardadas acá.** `calibracion.md` describe 22 corridas
+de esas dos rondas y en este repositorio no hay ningún archivo que las respalde. La herramienta con
+la que se corrieron (`panel-evaluador/server/calibrar.py`) hasta ahora solo imprimía a la consola,
+así que la explicación más probable es que la evidencia quedó en stdout — pero **eso es una
+explicación, no una verificación**: quien lea este repo no puede comprobar que esas corridas
+ocurrieron, y nosotros tampoco podemos demostrárselo.
 
 Lo decimos explícitamente porque es exactamente la bandera **B1** de nuestra propia rúbrica —una
 afirmación que los archivos no sostienen— y sería incoherente aplicarle a los demás una vara que
