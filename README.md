@@ -10,17 +10,13 @@
 | Santiago Paris | Construcción conjunta de lo anterior. Además, auditoría del corrector previa a la prueba de fuego y corrección de los hallazgos: el clon superficial que falseaba B6, el filtro del dump, los falsos positivos del escaneo forense, la fuga del delimitador, la tolerancia del parser y los bugs del panel. |
 
 **Sobre el historial de commits.** El sistema se construyó **de a dos, trabajando juntos**, pero
-los commits hasta el 2026-09-06 los firmó una sola persona: se commiteaba desde una sola máquina.
-Los de la auditoría posterior sí están firmados por su autor.
+durante la primera etapa se commiteaba desde una sola máquina, así que esos commits quedaron
+firmados por una sola persona. El 2026-09-06 se reescribió el historial para agregarles el trailer
+`Co-Authored-By` y que refleje quiénes lo escribieron: las fechas y los mensajes son los originales,
+lo único que cambió son los identificadores de commit.
 
-Es una diferencia que importa en un trabajo cuya tesis es *puntuar solo lo verificable*: durante
-esa primera etapa el historial no muestra el reparto real. Lo declaramos acá en vez de dejar que
-se deduzca mal en cualquiera de las dos direcciones.
-
-<!-- PENDIENTE: correr la reescritura de historial que agrega Co-Authored-By a los commits
-     anteriores al 2026-09-06 y, cuando esté hecha, reemplazar el párrafo de arriba por la
-     versión que dice que el historial ya lo refleja. Mientras no esté hecha, este texto es el
-     que corresponde: describe el repositorio como está, no como va a quedar. -->
+Lo dejamos anotado porque en un trabajo cuya tesis es *puntuar solo lo verificable* corresponde
+decir que el historial fue corregido, y no presentarlo como si siempre hubiera sido así.
 
 ## Qué construimos
 
