@@ -480,7 +480,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         salida = resultado_llamada["text"]
-        v = validador.validar(salida)
+        v = validador.validar(salida, dump_count=dump["count"])
         self._send_json({
             "salida": salida,
             "validacion": v,

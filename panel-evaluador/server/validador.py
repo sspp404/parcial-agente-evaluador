@@ -83,7 +83,13 @@ def parse_correccion(texto: str) -> dict:
     return out
 
 
-def validar(texto: str) -> dict:
+def validar(texto: str, dump_count: int | None = None) -> dict:
+    """`dump_count`, cuando está disponible (la corrida automática lo tiene:
+    es dump["count"], la cantidad real de archivos que se le mandaron al
+    modelo), permite comparar contra un número exacto en vez de un umbral fijo
+    — así un repositorio que genuinamente solo tiene 1 archivo relevante (por
+    ejemplo, un repo público sin ninguna estructura de trabajo final) no se
+    rechaza como si el agente no hubiera leído nada."""
     p = parse_correccion(texto)
     resultados = []
     criticos = 0
@@ -99,9 +105,19 @@ def validar(texto: str) -> dict:
 
     if p["archivosLeidos"] is None:
         agregar("bad", "Falta la línea de trazabilidad", 'No aparece "Archivos leídos: N".')
+    elif dump_count is not None:
+        if p["archivosLeidos"] != dump_count:
+            agregar("bad", f"Declara haber leído {p['archivosLeidos']} archivo(s), pero se le entregaron {dump_count}",
+                    "El número tiene que coincidir con lo que realmente se le mandó — si no coincide, o mintió o perdió la cuenta.")
+        else:
+            agregar("ok", f"Leyó los {p['archivosLeidos']} archivo(s) que se le entregaron")
     elif p["archivosLeidos"] <= 1:
-        agregar("bad", f"Solo declara {p['archivosLeidos']} archivo(s) leído(s)",
-                "El agente no leyó el repositorio. Volver a correr en sesión limpia.")
+        # Sin dump_count (modo manual: la corrida pasó por un chat externo, no
+        # tenemos con qué comparar) no podemos distinguir "no leyó nada" de
+        # "el repo genuinamente tiene 1 archivo" — queda como aviso visible,
+        # no como rechazo automático.
+        agregar("warn", f"Solo declara {p['archivosLeidos']} archivo(s) leído(s)",
+                "Puede ser que el agente no haya leído el repositorio, o que el repositorio realmente tenga muy poco para leer. Revisalo.")
     else:
         agregar("ok", f"Leyó {p['archivosLeidos']} archivos")
 
@@ -120,10 +136,19 @@ def validar(texto: str) -> dict:
         else:
             agregar("ok", "Todos los puntajes son niveles válidos")
 
-        sin_cita = [d for d in p["dims"] if not _RE_RUTA.search(d["texto"])]
-        if sin_cita:
-            agregar("bad", f"{len(sin_cita)} dimensión(es) sin citar archivo",
-                    ", ".join(f"D{d['num']}" for d in sin_cita))
+        # Citar un archivo puntual tiene sentido para justificar puntaje
+        # GANADO (evita que el modelo se atribuya crédito sin evidencia). Para
+        # un puntaje en 0 por ausencia total ("no existe X"), exigir que cite
+        # un archivo que no existe es una exigencia sin sentido — se marcó
+        # como bad y así se perdían correcciones honestas de repos vacíos.
+        sin_cita_con_puntaje = [d for d in p["dims"] if d["score"] > 0 and not _RE_RUTA.search(d["texto"])]
+        sin_cita_en_cero = [d for d in p["dims"] if d["score"] == 0 and not _RE_RUTA.search(d["texto"])]
+        if sin_cita_con_puntaje:
+            agregar("bad", f"{len(sin_cita_con_puntaje)} dimensión(es) con puntaje pero sin citar archivo",
+                    ", ".join(f"D{d['num']}" for d in sin_cita_con_puntaje))
+        elif sin_cita_en_cero:
+            agregar("warn", f"{len(sin_cita_en_cero)} dimensión(es) en 0 sin mencionar un archivo concreto",
+                    ", ".join(f"D{d['num']}" for d in sin_cita_en_cero))
         else:
             agregar("ok", "Cada puntaje cita un archivo")
 
