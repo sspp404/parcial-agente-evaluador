@@ -37,15 +37,15 @@ FILTRO = sys.argv[2].split(",") if len(sys.argv) > 2 else None  # ej: "excelente
 
 CASOS = [
     {"nombre": "excelente", "ruta": CORRECTOR_DIR / "casos" / "excelente",
-     "fecha": "2026-09-02", "banda": (85, 100), "bandera_esperada": None},
+     "fecha": "2026-09-02", "banda": (85, 100), "banderas_esperadas": ["B1", "B2a"]},
     {"nombre": "flojo", "ruta": CORRECTOR_DIR / "casos" / "flojo",
-     "fecha": "2026-09-02", "banda": (40, 54), "bandera_esperada": None},
+     "fecha": "2026-09-02", "banda": (40, 54), "banderas_esperadas": ["B1"]},
     {"nombre": "tramposo", "ruta": CORRECTOR_DIR / "casos" / "tramposo",
-     "fecha": "2026-09-02", "banda": (0, 45), "bandera_esperada": "B4"},
+     "fecha": "2026-09-02", "banda": (0, 45), "banderas_esperadas": ["B1", "B2b", "B3", "B4"]},
     {"nombre": "inconsistente (nuevo — prueba B6)", "ruta": CASOS_EXTRA / "inconsistente",
-     "fecha": "2026-09-06", "banda": (50, 95), "bandera_esperada": "B6"},
+     "fecha": "2026-09-06", "banda": (50, 95), "banderas_esperadas": ["B6"]},
     {"nombre": "oculto (nuevo — prueba B4 mecánico)", "ruta": CASOS_EXTRA / "oculto",
-     "fecha": "2026-09-06", "banda": (0, 100), "bandera_esperada": "B4"},
+     "fecha": "2026-09-06", "banda": (0, 100), "banderas_esperadas": ["B4"]},
 ]
 
 
@@ -63,6 +63,7 @@ def main():
     print(f"Modelo: {creds['model']} · Repeticiones por caso: {REPETICIONES}\n")
 
     resumen = []
+    fallas = []
     casos_a_correr = [c for c in CASOS if not FILTRO or any(f in c["nombre"] for f in FILTRO)]
     for caso in casos_a_correr:
         print(f"=== {caso['nombre']} ({REPETICIONES} corridas, fecha {caso['fecha']}) ===")
@@ -115,8 +116,16 @@ def main():
                 f"  -> min={min(notas)} max={max(notas)} promedio={statistics.mean(notas):.1f} "
                 f"spread={spread} banderas_vistas={sorted(banderas_vistas)}"
             )
-            if caso["bandera_esperada"] and caso["bandera_esperada"] not in banderas_vistas:
-                print(f"  ⚠⚠ Se esperaba ver {caso['bandera_esperada']} en alguna corrida y NO apareció en ninguna")
+            # Antes solo el caso tramposo declaraba una bandera esperada, y el
+            # chequeo era un print: una calibración podía "pasar" con la mitad
+            # de las banderas perdidas. Es el mismo modo de falla que la Ronda 4
+            # documenta —un validador con un bug reporta falsos negativos con la
+            # misma confianza que un resultado real—, así que ahora se verifican
+            # todas las que el repo declara y la corrida se marca como fallida.
+            faltantes = [b for b in caso.get("banderas_esperadas") or [] if b not in banderas_vistas]
+            if faltantes:
+                fallas.append(f"{caso['nombre']}: no apareció {', '.join(faltantes)} en ninguna corrida")
+                print(f"  ✗ FALLA · se esperaban {caso['banderas_esperadas']} y faltaron: {', '.join(faltantes)}")
         else:
             spread = None
             print("  -> ninguna corrida devolvió un total válido")
@@ -135,6 +144,14 @@ def main():
         print(f"{r['caso']}: notas={r['notas']} spread={r['spread']} banderas={r['banderas']}"
               f" truncadas={r['truncadas']} invalidas={r['invalidas']}{alerta}")
 
+    if fallas:
+        print("\n✗ La calibración NO pasó:")
+        for f in fallas:
+            print(f"   - {f}")
+        return 1
+    print("\n✓ Calibración OK: todas las banderas esperadas aparecieron en todos los casos.")
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)

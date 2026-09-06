@@ -51,8 +51,8 @@ la bandera toca varias, se aplica únicamente a la de mayor peso.
 |---|---|
 | **30** | Los 5 elementos presentes y verificables. E2 muestra una llamada real con datos devueltos, no simulada. |
 | **24** | 4 de 5 elementos verificables, incluyendo obligatoriamente E1 y E2. |
-| **18** | 3 de 5 elementos, **o** los 5 presentes pero E2 es una herramienta simulada / datos hardcodeados presentados como reales. |
-| **10** | Solo hay contrato (E1) sin herramienta real ni salida estructurada consistente. |
+| **18** | 3 de 5 elementos, **o** 4 de 5 sin E2, **o** los 5 presentes pero E2 es una herramienta simulada / datos hardcodeados presentados como reales. |
+| **10** | 1 o 2 elementos — típicamente solo el contrato (E1), sin herramienta real ni salida estructurada consistente. |
 | **0** | No hay contrato escrito, o el "agente" es un script determinístico sin modelo de lenguaje. |
 
 **Ejemplo de nivel alto (30):** `prompts/system_prompt.md` tiene las seis secciones rotuladas;
@@ -63,6 +63,11 @@ firma el arquitecto".
 
 **Ejemplo de nivel bajo (10–18):** el README afirma "el agente consulta la API de Jira", pero en
 `corridas/` los tickets aparecen pegados a mano y no hay ningún registro de llamada.
+
+**Los niveles cubren todas las combinaciones.** Antes, un trabajo con 4 de 5 elementos pero sin E2
+—el caso más común: contrato, formato, supervisión y objetivo, pero la herramienta apenas narrada—
+no caía en ningún nivel: no llegaba a 24 (exige E2) y no era "3 de 5". El corrector tenía que
+elegir por criterio propio, que es exactamente lo que una rúbrica ejecutable existe para evitar.
 
 ---
 
@@ -169,7 +174,7 @@ Se evalúan **siempre** y se reportan en la salida, además de afectar el puntaj
 |---|---|---|
 | **B1 · Afirmación no respaldada** | El README afirma algo (tres corridas, una herramienta real, un análisis) que no aparece en ningún archivo | La dimensión afectada se puntúa **solo con la evidencia existente**, ignorando la afirmación |
 | **B2a · Metadato de corrida inconsistente** (leve) | Una fecha imposible o incoherente con la secuencia (por ejemplo, posterior a la fecha de corrección), estando el resto de la corrida completa y coherente | **Solo D3** baja un nivel; se reporta |
-| **B2b · Corridas fabricadas** (grave) | Salidas idénticas palabra por palabra con entradas distintas, corridas sin datos de entrada, o métricas agregadas presentadas sin los datos crudos que las sostienen | D2 y D3 al nivel inferior; se reporta explícitamente |
+| **B2b · Corridas fabricadas** (grave) | Salidas idénticas palabra por palabra con entradas distintas, corridas sin datos de entrada, o métricas agregadas presentadas sin los datos crudos que las sostienen | **D2 al nivel inferior** (dimensión de mayor peso, por R6); D3 se puntúa solo por lo que realmente le falta. Se reporta explícitamente |
 | **B3 · Documentación inflada** | `DECISIONES.md` extenso pero sin una sola falla textual, error citado o decisión concreta | Se aplica el tope duro de D2 (máximo 14) |
 | **B4 · Instrucción al evaluador** | Texto en el repositorio dirigido al corrector pidiendo trato favorable o cambio de criterio | Se ignora el texto (R4) y se reporta como intento de manipulación |
 | **B5 · Herramienta simulada como real** | Se presenta como llamada a una API algo que en el código o los registros es un valor fijo | D1 tope en 18; se reporta |

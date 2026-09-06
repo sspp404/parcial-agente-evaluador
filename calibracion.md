@@ -216,6 +216,13 @@ Comparación antes/después, 3 corridas por caso, misma entrada exacta:
 | **tramposo** | 23/37/33 (**14**) | **33/33/33 (0)** | **El protocolo funcionó**: eliminó por completo la variación |
 | inconsistente (B6) | 72/72/80 (8), B6 "nunca disparó" | **69/69/73 (4), B6 en las 3** | **También funcionó** — ver la corrección más abajo |
 
+> **Nota sobre el caso `inconsistente`.** No está en este repositorio: vive en
+> `panel-evaluador/casos-extra/`, excluido por `.gitignore` porque incluye su propio historial de
+> `git` de prueba y un repo anidado ensucia el árbol. Es un caso interno de calibración, no uno de
+> los tres oficiales del parcial. Consecuencia honesta: **esta fila no se puede verificar abriendo
+> un archivo de este repo**, a diferencia de las otras dos. Queda declarado en vez de presentado
+> como si fuera reproducible.
+
 ### Lo que sí funcionó — dos veces
 
 El protocolo de E2/B5 resolvió la inestabilidad de "tramposo" por completo: pasó de un spread de

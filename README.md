@@ -6,8 +6,15 @@
 
 | Nombre | Rol en el grupo |
 |---|---|
-| Sebastian Nazarian | |
-| Santiago Paris | |
+| Sebastian Nazarian | Diseño de la rúbrica ejecutable y del contrato del corrector, los tres casos de prueba, las cuatro rondas de calibración y el panel evaluador. Autor de los commits `3d9a…`–`983d21d`. |
+| Santiago Paris | Auditoría del corrector previa a la prueba de fuego y corrección de los hallazgos: clon superficial que falseaba B6, filtro del dump, falsos positivos del escaneo forense, fuga del delimitador, tolerancia del parser y bugs del panel. Autor de los commits de la rama `fix/auditoria-pre-prueba-de-fuego`. |
+
+**Sobre el historial de commits.** Hasta el 2026-09-06 el repositorio tiene un solo autor: la
+construcción se hizo en sesiones de trabajo conjunto sobre una máquina, y quedó firmada por quien
+la tenía adelante. La auditoría posterior sí está commiteada por su autor. Lo decimos porque un
+trabajo cuya tesis es *puntuar solo lo verificable* no puede pedir que se le crea un reparto que
+su propio historial no muestra — y porque preferimos declararlo a simularlo con co-autorías
+retroactivas.
 
 ## Qué construimos
 
@@ -73,6 +80,11 @@ propósito, para que el corrector no dependa del tema:
 | Excelente | 90–100 | **97/100** | B1, B2a |
 | Flojo | 40–50 | **44/100** | B1 (×2) |
 | Tramposo | 25–45 | **33/100** | B1, B2b, B3, B4, B5 |
+
+Las tres notas son las de la **Ronda 4**, con el Protocolo de evidencia aplicado. La salida cruda
+que está en el repo para el tramposo (`correcciones/ronda2_tramposo.md`) marca **37**, que es la
+nota de la Ronda 2: el protocolo bajó ese caso a 33 y lo estabilizó en 33/33/33. Las dos rondas
+están en `calibracion.md`; dejamos el número acá para que nadie tenga que reconciliarlo solo.
 
 64 puntos de distancia entre el excelente y el tramposo, y estable en corridas repetidas (ver
 "Protocolo de Evidencia" más abajo). Sobre el párrafo que le pedía nota máxima, el corrector

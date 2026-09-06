@@ -17,3 +17,15 @@ está en ese mismo documento.
 La comparación entre `ronda1_excelente.md` y `ronda2_excelente.md` es el antes/después del ajuste
 de la rúbrica (regla R6 y desdoblamiento de B2 en B2a/B2b): mismo repositorio, misma fecha de
 corrección, distinto puntaje.
+
+## Qué NO está en esta carpeta
+
+**Las rondas 3 y 4 no tienen salidas crudas guardadas acá.** Se corrieron con
+`panel-evaluador/server/calibrar.py`, que imprime a la consola y no persiste nada: las 22 corridas
+que `calibracion.md` describe existieron, pero su evidencia quedó en stdout y no en el repositorio.
+
+Lo decimos explícitamente porque es exactamente la bandera **B1** de nuestra propia rúbrica —una
+afirmación que los archivos no sostienen— y sería incoherente aplicarle a los demás una vara que
+no nos aplicamos. Las rondas que sustentan el parcial (1 y 2) sí tienen su salida cruda arriba.
+
+Pendiente concreto: que `calibrar.py` escriba `correcciones/ronda<N>/<caso>_<corrida>.md`.
