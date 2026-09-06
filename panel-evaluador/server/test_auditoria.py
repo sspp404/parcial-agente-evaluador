@@ -235,7 +235,18 @@ def test_caso_b6_materializa_su_historial():
     check("crear_historial.sh existe", script.exists())
     if not script.exists():
         return
-    check("el caso NO trae un .git anidado versionado", not (origen / ".git").exists())
+    # El invariante real no es que el `.git` no exista nunca —hay que materializarlo
+    # para calibrar B6, y el script está justamente para eso—, sino que NO se
+    # versione: un repo anidado dentro del repo del parcial es lo que obligaba a
+    # dejar este caso afuera. Se verifica contra el índice de git, no contra el disco.
+    versionados = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files", "-s", "casos-extra/inconsistente"],
+        capture_output=True, text=True,
+    ).stdout
+    anidado = [l for l in versionados.splitlines() if "/.git" in l or l.startswith("160000")]
+    check("el caso no versiona un .git anidado ni queda como submódulo", not anidado, str(anidado[:2]))
+    if (origen / ".git").exists():
+        print("     (nota: el historial está materializado en disco — así se corre la calibración de B6)")
 
     with tempfile.TemporaryDirectory() as tmp:
         import shutil
