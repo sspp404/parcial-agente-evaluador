@@ -76,7 +76,12 @@ def escanear_texto(texto: str, archivo: str) -> list[dict]:
                 "contexto": _contexto(texto, idx),
             })
 
-    for m in re.finditer(r"\S{2,}", texto):
+    # Se tokeniza por rachas de LETRAS, no por "no-espacios". Con \S{2,} un
+    # fragmento de HTML como  style="text-align:center">Δ  contaba como una
+    # sola palabra: la Δ quedaba en minoría entre las letras de los atributos y
+    # se marcaba como homóglifo. Un ataque real mete la letra extraña DENTRO de
+    # una palabra ("аdmin" con а cirílica), y eso es una racha de letras.
+    for m in re.finditer(r"[^\W\d_]{2,}", texto, re.UNICODE):
         palabra = m.group(0)
         latinas = [c for c in palabra if c.isascii() and c.isalpha()]
         sospechosos = [c for c in palabra if _es_homoglifo_sospechoso(c)]
@@ -112,7 +117,8 @@ def escanear_texto(texto: str, archivo: str) -> list[dict]:
     # solo "=" es un subrayado de título y no matchea porque pedimos texto).
     for m in re.finditer(
         r"={3,}\s*(ALERTA AUTOM[ÁA]TICA DE SEGURIDAD|Historial (?:real )?de git|"
-        r"C[óo]mo leer lo que sigue)",
+        r"C[óo]mo leer lo que sigue|Tarea|Listado completo de archivos|"
+        r"Contenido de README|rubrica\.md)",
         texto, re.IGNORECASE,
     ):
         hallazgos.append({
@@ -179,7 +185,7 @@ def leer_historial_git(root: Path) -> dict | None:
             # hace: un historial inventado en una sola sesión deja las fechas de
             # autor repartidas en semanas y las de committer todas juntas. Esa
             # divergencia es la señal, y no la teníamos.
-            ["git", "-C", str(root), "log", "--pretty=format:%aI|%cI|%an|%cn"],
+            ["git", "-C", str(root), "log", "--pretty=format:%aI%x1f%cI%x1f%an%x1f%cn"],
             capture_output=True, text=True, timeout=15,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
@@ -189,7 +195,9 @@ def leer_historial_git(root: Path) -> dict | None:
 
     fechas, fechas_commit, autores, committers = [], [], set(), set()
     for linea in proc.stdout.strip().split("\n"):
-        partes = linea.split("|", 3)
+        # \x1f (unit separator) en vez de "|": un autor llamado "A|B" corrompía
+        # el parseo y metía basura en la lista de autores.
+        partes = linea.split("\x1f", 3)
         if len(partes) < 4 or not partes[0]:
             continue
         fechas.append(partes[0])
@@ -200,23 +208,28 @@ def leer_historial_git(root: Path) -> dict | None:
         return None
 
     def _spread(iso_list):
+        """Ordena como FECHAS, no como texto: con husos distintos el orden
+        alfabético de los ISO no coincide con el cronológico y el spread podía
+        salir negativo."""
         if not iso_list:
             return None
-        orden = sorted(iso_list)
         try:
-            return (datetime.fromisoformat(orden[-1]) - datetime.fromisoformat(orden[0])).days
+            ds = sorted(datetime.fromisoformat(x) for x in iso_list)
         except ValueError:
             return None
+        return max(0, (ds[-1] - ds[0]).days)
 
     fechas.sort()
     dias = _spread(fechas)
     dias_commit = _spread(fechas_commit)
 
-    # Un historial genuino tiene los dos spreads parecidos: se fue commiteando a
-    # medida que se trabajaba. Fechas de autor repartidas en semanas con fechas de
-    # committer todas en el mismo día significa que el historial se escribió de una
-    # sentada hacia atrás.
-    retroactivo = (
+    # Los dos spreads divergen cuando las fechas de autor se reparten en el tiempo
+    # y las de committer se agrupan. Eso pasa en un historial escrito de una
+    # sentada hacia atrás… y TAMBIÉN en cualquier repositorio rebaseado,
+    # squasheado o con un `commit --amend`, que son operaciones normales y
+    # legítimas. Por eso el dato se informa, pero no se presenta como evidencia
+    # de nada por sí solo: quien concluye es el corrector, con el relato adelante.
+    spreads_divergen = (
         dias is not None and dias_commit is not None
         and dias >= 3 and dias_commit == 0
     )
@@ -229,7 +242,7 @@ def leer_historial_git(root: Path) -> dict | None:
         "ultimoCommit": fechas[-1],
         "diasDeSpread": dias,
         "diasDeSpreadCommitter": dias_commit,
-        "fechasRetroactivas": retroactivo,
+        "spreadsDivergen": spreads_divergen,
     }
 
 
@@ -253,10 +266,17 @@ def construir_bloque_prompt(alertas_seguridad: list[dict], git_log: dict | None)
     necesidad de levantar el servidor ni gastar una llamada real a Anthropic."""
     bloque = ""
     if alertas_seguridad:
+        # El detalle y el contexto vienen del archivo del alumno: si se pegan
+        # crudos, el propio bloque de alerta se convierte en el vehículo de la
+        # inyección que está denunciando. Se colapsan saltos y separadores, se
+        # recorta, y cada valor va entre comillas.
         items = "\n".join(
-            f"- [{h['tipo']}] en `{h['archivo']}`: {h['detalle']} (contexto: \"…{h['contexto']}…\")"
-            for h in alertas_seguridad
+            f"- [{_limpio(h['tipo'], 40)}] en «{_limpio(h['archivo'], 80)}»: "
+            f"{_limpio(h['detalle'], 160)} (contexto: «{_limpio(h['contexto'], 120)}»)"
+            for h in alertas_seguridad[:20]
         )
+        if len(alertas_seguridad) > 20:
+            items += f"\n- (y {len(alertas_seguridad) - 20} hallazgo(s) más del mismo tipo)"
         bloque += (
             f"\n=== ALERTA AUTOMÁTICA DE SEGURIDAD (detección mecánica, no depende de tu criterio) ===\n"
             f"El escaneo previo del repositorio encontró {len(alertas_seguridad)} elemento(s) "
@@ -285,15 +305,16 @@ def construir_bloque_prompt(alertas_seguridad: list[dict], git_log: dict | None)
             f"iteraciones a lo largo del tiempo pero el historial real es de muy pocos días o un solo "
             f"autor pese a mencionar un equipo, reportalo como bandera B6.\n"
         )
-        if g.get("fechasRetroactivas"):
+        if g.get("spreadsDivergen"):
             bloque += (
-                "ATENCIÓN: las fechas de AUTOR de este repositorio están repartidas en varios días, "
-                "pero las de COMMITTER caen todas el mismo día. Un proceso real deja los dos spreads "
-                "parecidos, porque se commitea a medida que se trabaja. Esta divergencia es el patrón "
-                "de un historial escrito de una sentada con fechas hacia atrás. No alcanza por sí sola "
-                "para afirmar la intención, pero sí para que NO tomes el spread de autor como prueba "
-                "de un proceso extendido: si DECISIONES.md se apoya en ese relato, reportá B6 citando "
-                "los dos spreads.\n"
+                "NOTA SOBRE LAS FECHAS: las de AUTOR están repartidas en varios días y las de "
+                "COMMITTER caen todas el mismo día. Esto pasa en un historial reescrito hacia atrás, "
+                "pero TAMBIÉN en cualquier repositorio rebaseado, squasheado o con un `commit "
+                "--amend` — operaciones normales que no dicen nada sobre la honestidad del proceso. "
+                "**Por sí sola, esta divergencia NO es B6 y no la reportes como tal.** Lo único que "
+                "significa es que el spread de fechas de autor no es, acá, prueba independiente de un "
+                "proceso extendido: si querés sostener o refutar el relato de DECISIONES.md, apoyate "
+                "en otra evidencia del repositorio.\n"
             )
     else:
         bloque += (

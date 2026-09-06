@@ -8,7 +8,8 @@ medible y repetible.
 Uso:
     python calibrar.py [repeticiones]   (default: 3)
 
-Requiere DOPPLER_TOKEN configurado (igual que la app).
+Requiere credenciales: DOPPLER_TOKEN o, más simple, ANTHROPIC_API_KEY como
+variable de entorno (ver panel-evaluador/README.md).
 """
 import os
 import statistics
@@ -80,9 +81,18 @@ def main():
     guardadas = []
     etiqueta = datetime.now().strftime("%Y%m%d-%H%M")
     salida_dir = CORRECCIONES_DIR / f"corrida_{etiqueta}"
-    salida_dir.mkdir(parents=True, exist_ok=True)
+    # Se crea recién cuando hay algo que guardar, para no dejar carpetas vacías
+    # en correcciones/ cada vez que la calibración muere antes de empezar.
     print(f"Salidas crudas -> {os.path.relpath(salida_dir, CORRECTOR_DIR)}/\n")
-    casos_a_correr = [c for c in CASOS if not FILTRO or any(f in c["nombre"] for f in FILTRO)]
+    casos_a_correr = [c for c in CASOS if not FILTRO or c["nombre"] in FILTRO]
+    if FILTRO:
+        # Igualdad, no subcadena: "excelente" ya no arrastraba a otros casos, y un
+        # nombre mal escrito corría todo en vez de avisar.
+        desconocidos = [f for f in FILTRO if f not in {c["nombre"] for c in CASOS}]
+        if desconocidos:
+            print(f"✗ Casos desconocidos en el filtro: {', '.join(desconocidos)}")
+            print(f"  Disponibles: {', '.join(c['nombre'] for c in CASOS)}")
+            return 1
     for caso in casos_a_correr:
         print(f"=== {caso['nombre']} ({REPETICIONES} corridas, fecha {caso['fecha']}) ===")
         try:
@@ -111,7 +121,10 @@ def main():
                 fallas.append(f"{caso['nombre']}: corrida {i+1} falló por error de API ({e})")
                 continue
             dt = time.time() - t0
-            v = validador.validar(r["text"])
+            # Con dump_count, el validador compara "Archivos leídos" contra el número
+            # real enviado. Sin él, calibrar aceptaba como buena una salida que el
+            # panel habría marcado — dos varas distintas para la misma corrección.
+            v = validador.validar(r["text"], dump_count=dump["count"])
             total = v["parsed"]["total"]
             bs = v["parsed"]["banderas"]
             banderas_vistas.update(bs)
@@ -143,6 +156,7 @@ def main():
             # en calibracion.md y cero archivos que las respalden. Una calibración
             # cuya evidencia vive en una terminal que ya se cerró no es evidencia.
             slug = "".join(c if c.isalnum() or c in "-_" else "_" for c in caso["nombre"])
+            salida_dir.mkdir(parents=True, exist_ok=True)
             destino = salida_dir / f"{slug}_{i+1}.md"
             destino.write_text(
                 f"<!-- generado por calibrar.py · caso={caso['nombre']} · corrida={i+1}/{REPETICIONES}\n"

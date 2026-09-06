@@ -54,6 +54,19 @@ detectado y una vista enmascarada de la key (nunca completa). El caché dura 5 m
 cambiás el secreto en Doppler, tarda como máximo eso en reflejarse acá, o usá "Probar conexión"
 para forzar el refresco.
 
+## Verificar que todo funciona, sin gastar un peso
+
+```bash
+python3 panel-evaluador/server/test_auditoria.py
+```
+
+Corre la suite de regresión completa: no necesita red, credenciales ni servidor, y falla con
+código 1 si algún bug de los que ya se arreglaron vuelve. Es lo primero que conviene correr después
+de tocar cualquier cosa del backend.
+
+Para medir la corrección de punta a punta contra la API real —eso sí gasta tokens— está
+`calibrar.py`, más abajo.
+
 ### Atajo para probarla suelta, sin Doppler
 
 Si sos otra persona (no del grupo) y solo querés probar la app con tu propia cuenta de
@@ -125,7 +138,7 @@ le pasás el `.json` → ellos lo cargan con "Combinar" (no pisa lo que ya tiene
 | `python: command not found` (macOS/Linux) | Ese sistema no tiene el alias `python`, solo `python3` | Usá `python3 server/app.py` |
 | "No hay ninguna fuente de API key configurada" | Falta Doppler **y** falta `ANTHROPIC_API_KEY` | Elegí uno de los dos caminos de la sección de arriba |
 | "Doppler rechazó el token (401)" | Token mal copiado o revocado | Generá uno nuevo en Doppler |
-| La carpeta del proyecto no se encuentra | Ruta relativa mal escrita, o repo no clonado todavía | "Verificar carpeta" te muestra la ruta absoluta que está probando |
+| La carpeta del proyecto no se encuentra | Ruta relativa mal escrita, o repo no clonado todavía | La verificación es automática al elegir el proyecto en "Nueva corrección": ahí abajo aparece la ruta que el backend está probando. Las rutas relativas se resuelven contra la raíz del repositorio (`casos/flojo`, no `../casos/flojo`) |
 | Puntúa sin citar archivos / en formato libre | El modelo no siguió el contrato | Sesión limpia (manual) o corré de nuevo (auto); no lo aceptes |
 | Obedece algo que dice el repo evaluado | Falló la regla R4 | Es un bug real del corrector: registralo, es material de calibración |
 

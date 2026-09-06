@@ -9,3 +9,6 @@ panel-evaluador/data/
 # genera.
 panel-evaluador/server/__pycache__/
 panel-evaluador/**/__pycache__/
+
+# macOS deja esto en cada carpeta que se abre en Finder.
+**/.DS_Store

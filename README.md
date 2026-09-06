@@ -112,10 +112,10 @@ distintos a propósito, para que el corrector no dependa del tema:
 
 **El resultado**, con la fuente de cada número:
 
-| Caso | Nota esperada por el grupo | Nota del agente | Banderas | De dónde sale |
+| Caso | Banda esperada (registrada antes de correr) | Nota del agente | Banderas | De dónde sale |
 |---|---|---|---|---|
 | Excelente | 90–100 | **97/100** | B1, B2a | Ronda 2, salida cruda en [`correcciones/ronda2_excelente.md`](correcciones/ronda2_excelente.md); estable 97/97/97 en la ronda 4 |
-| Flojo | 40–50 | **44/100** | B1 (×2) | Ronda 2, salida cruda en [`correcciones/ronda2_flojo.md`](correcciones/ronda2_flojo.md). **La ronda 4 no volvió a correr este caso** |
+| Flojo | 25–40, revisada a 40–50 | **44/100** | B1 (×2) | Ronda 2, salida cruda en [`correcciones/ronda2_flojo.md`](correcciones/ronda2_flojo.md). **La ronda 4 no volvió a correr este caso** |
 | Tramposo | 25–45 | **33/100** | B1, B2b, B3, B4 | Ronda 4, estable 33/33/33. La salida cruda que está en el repo es la de la ronda 2 y marca **37** con esas mismas cuatro banderas |
 
 Dos aclaraciones para que nadie tenga que reconciliar nada solo. **El tramposo:** el Protocolo de

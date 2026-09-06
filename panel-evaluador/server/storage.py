@@ -21,6 +21,9 @@ def _uid() -> str:
     return uuid.uuid4().hex[:12]
 
 
+# Mismo tope al guardar y al importar: si no, un round-trip export/import
+# truncaba silenciosamente el informe de una corrección larga.
+MAX_RAW = 400_000
 _RE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _RE_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _RE_BANDERA = re.compile(r"^B[1-6][ab]?$")
@@ -30,15 +33,34 @@ def _texto(v, maximo: int = 400) -> str:
     return v[:maximo] if isinstance(v, str) else ""
 
 
+# Whitelist explícita. Antes se partía de `dict(p)` y solo se pisaban algunos
+# campos: cualquier clave extra del archivo importado —y `dims`, que el frontend
+# interpola en el HTML— entraba cruda. Ahora se construye el objeto desde cero:
+# lo que no está acá, no entra.
+_CAMPOS_PROYECTO = ("nombre", "ruta", "url", "origen", "creado")
+
+
 def _saneado_proyecto(p) -> dict | None:
     if not isinstance(p, dict) or not _RE_ID.match(str(p.get("id", ""))):
         return None
-    limpio = dict(p)
-    limpio["id"] = str(p["id"])
-    for campo in ("nombre", "ruta", "url", "origen", "creado"):
-        if campo in limpio:
-            limpio[campo] = _texto(limpio[campo], 500)
+    limpio = {"id": str(p["id"])}
+    for campo in _CAMPOS_PROYECTO:
+        limpio[campo] = _texto(p.get(campo, ""), 500)
     return limpio
+
+
+def _saneada_dim(d) -> dict | None:
+    """`dims` alimenta las barras de la vista Comparar, que interpola score y max
+    en el HTML. Se aceptan solo tres enteros en rango."""
+    if not isinstance(d, dict):
+        return None
+    try:
+        num, score, mx = int(d.get("num")), int(d.get("score")), int(d.get("max"))
+    except (TypeError, ValueError):
+        return None
+    if not (1 <= num <= 5 and mx in (30, 25, 15) and 0 <= score <= mx):
+        return None
+    return {"num": num, "score": score, "max": mx}
 
 
 def _saneado_correccion(c) -> dict | None:
@@ -46,17 +68,22 @@ def _saneado_correccion(c) -> dict | None:
         return None
     if not _RE_ID.match(str(c.get("projectId", ""))):
         return None
-    limpio = dict(c)
-    limpio["id"] = str(c["id"])
-    limpio["projectId"] = str(c["projectId"])
     fecha = str(c.get("fecha", ""))
-    limpio["fecha"] = fecha if _RE_FECHA.match(fecha) else ""
     total = c.get("total")
-    limpio["total"] = total if isinstance(total, int) and 0 <= total <= 100 else None
-    limpio["veredicto"] = c["veredicto"] if c.get("veredicto") in ("ok", "warn", "bad") else "bad"
-    limpio["banderas"] = [b for b in (c.get("banderas") or []) if isinstance(b, str) and _RE_BANDERA.match(b)]
-    limpio["raw"] = _texto(c.get("raw", ""), 200_000)
-    return limpio
+    leidos = c.get("archivosLeidos")
+    guardado = str(c.get("guardado", ""))
+    return {
+        "id": str(c["id"]),
+        "projectId": str(c["projectId"]),
+        "fecha": fecha if _RE_FECHA.match(fecha) else "",
+        "raw": _texto(c.get("raw", ""), MAX_RAW),
+        "total": total if isinstance(total, int) and 0 <= total <= 100 else None,
+        "dims": [x for x in (_saneada_dim(d) for d in (c.get("dims") or [])) if x],
+        "banderas": [b for b in (c.get("banderas") or []) if isinstance(b, str) and _RE_BANDERA.match(b)],
+        "archivosLeidos": leidos if isinstance(leidos, int) and 0 <= leidos <= 10_000 else None,
+        "veredicto": c["veredicto"] if c.get("veredicto") in ("ok", "warn", "bad") else "bad",
+        "guardado": guardado[:32],
+    }
 
 
 class Storage:
@@ -169,7 +196,7 @@ class Storage:
                 "id": _uid(),
                 "projectId": data["projectId"],
                 "fecha": data.get("fecha"),
-                "raw": data["raw"],
+                "raw": _texto(data["raw"], MAX_RAW),
                 "total": data.get("total"),
                 "dims": data.get("dims", []),
                 "banderas": data.get("banderas", []),

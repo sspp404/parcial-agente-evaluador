@@ -61,7 +61,7 @@ Para cada una de las cinco dimensiones de `rubrica.md`:
 3. Justificá en una o dos frases, **citando la ruta del archivo** donde está (o falta) la evidencia.
 
 Después:
-4. Revisá las seis banderas de integridad B1–B6 y reportá las que apliquen.
+4. Revisá las siete filas de bandera de integridad de la rúbrica (B1, B2a, B2b, B3, B4, B5, B6) y reportá las que apliquen.
 5. Sumá el puntaje total y ubicalo en la escala final.
 6. Escribí **una sola** sugerencia de mejora: la que más puntos le habría sumado a este trabajo.
 

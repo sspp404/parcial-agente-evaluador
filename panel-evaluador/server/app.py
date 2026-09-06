@@ -13,6 +13,7 @@ disco es la contraseña de acceso al panel (hasheada) y los proyectos /
 correcciones que vas cargando.
 """
 import json
+import urllib.parse
 import mimetypes
 import os
 import re
@@ -75,8 +76,15 @@ class Handler(BaseHTTPRequestHandler):
         origen = self.headers.get("Origin") or self.headers.get("Referer") or ""
         if not origen:
             return True  # cliente no-navegador (curl, tests): no hay CSRF posible
-        host = self.headers.get("Host") or ""
-        return any(origen.startswith(f"http://{h}") for h in (host, "127.0.0.1", "localhost"))
+        # Comparación por netloc exacto: con startswith, un origen como
+        # http://127.0.0.1.atacante.com pasaba el chequeo.
+        host = (self.headers.get("Host") or "").strip()
+        try:
+            neto = urllib.parse.urlparse(origen).netloc
+        except ValueError:
+            return False
+        permitidos = {host, f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
+        return neto in permitidos
 
     def _session_token(self) -> str | None:
         raw = self.headers.get("Cookie")
@@ -101,7 +109,10 @@ class Handler(BaseHTTPRequestHandler):
         if not raw:
             return {}
         try:
-            return json.loads(raw.decode("utf-8"))
+            data = json.loads(raw.decode("utf-8"))
+            # Un body que sea lista, número o string hacía reventar el handler con
+            # AttributeError en el primer .get(). Se normaliza a dict vacío.
+            return data if isinstance(data, dict) else {}
         except json.JSONDecodeError:
             return {}
 

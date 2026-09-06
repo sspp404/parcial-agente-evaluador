@@ -103,6 +103,12 @@ def call(
                 continue
             raise AnthropicError(f"No se pudo conectar con Anthropic: {e.reason}")
         except TimeoutError:
+            # Un timeout es tan transitorio como un 429: no reintentarlo perdía
+            # la corrida entera por una lentitud pasajera.
+            if intento < len(ESPERAS):
+                ultimo_error = "Anthropic no respondió a tiempo (timeout)."
+                time.sleep(ESPERAS[intento])
+                continue
             raise AnthropicError("Anthropic no respondió a tiempo (timeout).")
     else:
         raise AnthropicError(ultimo_error or "Anthropic no respondió tras varios intentos.")

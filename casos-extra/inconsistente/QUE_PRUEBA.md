@@ -161,9 +161,10 @@ una señal más y el efecto de B6 deja de ser aislable.
 
 ## Nota para el grupo
 
-`calibracion.md` (Ronda 4, nota bajo la tabla) dice que este caso "no está en este repositorio:
-vive en `panel-evaluador/casos-extra/`, excluido por `.gitignore` porque incluye su propio
-historial de `git` de prueba". Con este cambio eso quedó viejo por partida doble: el caso ahora
-vive en `casos-extra/inconsistente`, se versiona, y **no incluye** ningún `.git` — lo genera
-`crear_historial.sh`. La fila de la Ronda 4 ya se puede verificar abriendo archivos de este repo,
-que era la limitación declarada. Conviene actualizar esa nota.
+El caso vive en `casos-extra/inconsistente`, se versiona como texto, y **no incluye** ningún
+`.git`: lo genera `crear_historial.sh`. Antes vivía fuera del repositorio y por eso la fila de la
+Ronda 4 en `calibracion.md` no se podía verificar; esa nota ya está actualizada allá.
+
+Lo que sigue sin poder verificarse son los **números** de esa fila (69/69/73): son de la versión
+anterior del caso y no se volvieron a correr. El montaje sí se puede auditar abriendo estos
+archivos; el resultado concreto, todavía no.

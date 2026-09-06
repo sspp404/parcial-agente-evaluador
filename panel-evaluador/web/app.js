@@ -521,6 +521,7 @@ Devolvé la corrección completa en el formato fijo que define tu system prompt,
     document.getElementById('nc-guardar-hint').textContent = '';
     document.getElementById('nc-forense').innerHTML = '';
     this._salidaProyectoId = null;
+    this._salidaFecha = null;
     this.mostrarModoSalida('editar');
     this.renderManual();
     this.renderAuto();
@@ -594,6 +595,7 @@ Devolvé la corrección completa en el formato fijo que define tu system prompt,
         return;
       }
       this._salidaProyectoId = pid;
+      this._salidaFecha = fecha;
       document.getElementById('nc-salida').value = res.salida;
       this.mostrarValidacion(res.validacion);
       this.mostrarForense(res.dump);
@@ -664,6 +666,15 @@ Devolvé la corrección completa en el formato fijo que define tu system prompt,
     if(!raw.trim()){ UI.toast('Pegá y validá la corrección primero.', 'bad'); return; }
     if(this._salidaProyectoId && this._salidaProyectoId !== p.id){
       UI.toast('Esta corrección se generó para otro proyecto. Volvé a correrla antes de guardar.', 'bad', 8000);
+      return;
+    }
+    // La fecha de corrección es un parámetro del resultado: con ella el corrector
+    // decide, por ejemplo, si una corrida futura dispara B2a. Cambiarla después
+    // de correr y guardar igual archivaba la corrección con una fecha que no es
+    // la que produjo esos números.
+    const fechaActual = document.getElementById('nc-fecha').value;
+    if(this._salidaFecha && this._salidaFecha !== fechaActual){
+      UI.toast(`Esta corrección se corrió con fecha ${this._salidaFecha} y ahora dice ${fechaActual}. Volvé a correrla o restaurá la fecha.`, 'bad', 9000);
       return;
     }
     try{
@@ -776,7 +787,7 @@ const Comparar = {
         const dim = (i.c.dims||[]).find(x=>x.num===d);
         if(!dim) return '<td class="hint">—</td>';
         const pct = Math.round(dim.score/dim.max*100);
-        return `<td><div class="bar-row" style="margin-bottom:0"><div class="bar-track" style="max-width:90px"><div class="bar-fill" style="width:${pct}%;background:${DIM_COLOR[d]}"></div></div><div class="bar-val" style="width:auto">${dim.score}/${dim.max}</div></div></td>`;
+        return `<td><div class="bar-row" style="margin-bottom:0"><div class="bar-track" style="max-width:90px"><div class="bar-fill" style="width:${pct}%;background:${DIM_COLOR[d]}"></div></div><div class="bar-val" style="width:auto">${esc(dim.score)}/${esc(dim.max)}</div></div></td>`;
       }).join('') + '</tr>';
     }
     rows += `<tr><td><b>Total</b></td>` + items.map(i=>`<td><b>${i.c.total!=null?esc(i.c.total)+'/100':'—'}</b></td>`).join('') + '</tr>';
@@ -895,17 +906,16 @@ const Lote = {
 
   render(){
     const box = document.getElementById('lote-lista');
+    // La poda va ANTES del early return: si se borra el último proyecto, el Set
+    // quedaba con ids fantasma y el contador seguía mostrándolos.
+    const vivos = new Set(STATE.projects.map(p=>p.id));
+    [...this.seleccionados].forEach(id => { if(!vivos.has(id)) this.seleccionados.delete(id); });
     if(!STATE.projects.length){
       box.innerHTML = '<div class="empty">Todavía no hay proyectos. Creá alguno en "Proyectos", o importá varios de golpe con "📋 Importar URLs".</div>';
       document.getElementById('lote-btn').disabled = true;
+      document.getElementById('lote-contador').textContent = '';
       return;
     }
-    // Podar la selección contra los proyectos que todavía existen: borrar un
-    // proyecto seleccionado dejaba su id fantasma en el Set, el contador seguía
-    // contándolo y al correr el lote reventaba con un TypeError antes de la
-    // primera corrida, dejando el botón deshabilitado para siempre.
-    const vivos = new Set(STATE.projects.map(p=>p.id));
-    [...this.seleccionados].forEach(id => { if(!vivos.has(id)) this.seleccionados.delete(id); });
     const filtro = (document.getElementById('lote-filtro').value || '').toLowerCase();
     const visibles = STATE.projects.filter(p => p.nombre.toLowerCase().includes(filtro));
     box.innerHTML = visibles.map(p =>

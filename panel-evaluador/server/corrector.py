@@ -171,7 +171,12 @@ def construir_dump(ruta: str, base: Path) -> dict:
         raise RutaInvalida(f"La carpeta no existe: {root}")
 
     todos = [p.relative_to(root).as_posix() for p in _iter_todos_los_archivos(root)]
-    listado = "\n".join(todos)
+    # Un nombre de archivo puede contener saltos de línea o "=" y falsear el
+    # listado desde adentro. Se normaliza y se numera: una línea del listado es
+    # siempre "N. ruta", así que un salto inyectado no puede simular otra entrada.
+    listado = "\n".join(
+        f"{i}. {forense._limpio(rel, 200)}" for i, rel in enumerate(todos, 1)
+    )
 
     # El listado se rotula "completo", y no lo era: EXCLUDE_DIRS y los
     # directorios ocultos se filtran en silencio. Si el repositorio evaluado

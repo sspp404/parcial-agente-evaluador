@@ -103,7 +103,10 @@ la rúbrica reporta este tipo de afirmación pero no la penaliza.
 
 ## Ronda 2 — rúbrica v2 (misma fecha de corrección: 2026-09-02)
 
-Se repitieron los tres casos con la rúbrica ajustada, manteniendo la fecha de corrección original
+Se repitieron los tres casos con la rúbrica ajustada. **Excelente y tramposo se corrieron con la
+fecha original (2026-09-02); flojo, con 2026-09-04** — la diferencia no afecta a ese caso porque
+ninguna de sus banderas depende de la fecha (la única sensible es B2a, y flojo no tiene corridas
+fechadas). El resto de esta ronda mantiene la fecha de corrección original
 para aislar el efecto del cambio.
 
 | Caso | Ronda 1 | Ronda 2 | D1 | D2 | D3 | D4 | D5 | Nota humana revisada | ¿Coincide? |

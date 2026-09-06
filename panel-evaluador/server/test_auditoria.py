@@ -71,11 +71,12 @@ def test_b6_no_se_fabrica_con_clon_superficial():
               "no lo penalices" in forense.construir_bloque_prompt([], None))
 
 
-def test_b6_detecta_fechas_retroactivas():
-    """B6 se derrotaba con dos variables de entorno: %aI y %an los elige quien
-    commitea. Ahora se miran también las fechas de committer, que en un
-    historial fabricado de una sentada quedan todas el mismo día."""
-    print("\nB6 · historial fabricado con fechas hacia atrás")
+def test_b6_informa_la_divergencia_sin_acusar():
+    """%aI y %an los elige quien commitea, así que un historial "largo y grupal"
+    se fabrica con dos variables de entorno. Se miran también las fechas de
+    committer — pero la divergencia se INFORMA, no se acusa: un rebase, un squash
+    o un `commit --amend` producen exactamente el mismo patrón."""
+    print("\nB6 · divergencia de fechas: se informa, no se acusa")
     with tempfile.TemporaryDirectory() as tmp:
         d = Path(tmp) / "falso"
         d.mkdir()
@@ -92,9 +93,12 @@ def test_b6_detecta_fechas_retroactivas():
         g = forense.leer_historial_git(d)
         check("el spread de autor simula tres semanas", g and g["diasDeSpread"] >= 20, str(g and g["diasDeSpread"]))
         check("el spread de committer delata la sesión única", g and g["diasDeSpreadCommitter"] == 0)
-        check("se marca como fechas retroactivas", g and g["fechasRetroactivas"] is True)
-        check("el prompt le avisa al corrector que no use ese spread como prueba",
-              "fechas hacia atrás" in forense.construir_bloque_prompt([], g))
+        check("se marca la divergencia entre los dos spreads", g and g["spreadsDivergen"] is True)
+        bloque = forense.construir_bloque_prompt([], g)
+        check("el prompt nombra las causas benignas (rebase, squash, amend)",
+              "rebase" in bloque and "amend" in bloque)
+        check("el prompt dice explícitamente que por sí sola NO es B6",
+              "NO es B6" in bloque)
 
 
 def test_el_recorte_no_saltea_el_escaneo():
@@ -125,6 +129,12 @@ def test_forense_distingue_ataque_de_notacion():
                 ("griegas de notación técnica", "latencia 12μs, Δt=3, α=0.5"),
                 ("markdown con subrayado ===", "Título\n======\n\ntexto")]
     for nombre, texto in benignos:
+        check(f"no acusa: {nombre}", len(forense.escanear_texto(texto, "x.md")) == 0,
+              str(forense.escanear_texto(texto, "x.md")))
+
+    benignos.append(("Δ en atributos HTML (caso real de una entrega honesta)",
+                     '<div style="text-align:center">Δ carga</div>'))
+    for nombre, texto in benignos[-1:]:
         check(f"no acusa: {nombre}", len(forense.escanear_texto(texto, "x.md")) == 0,
               str(forense.escanear_texto(texto, "x.md")))
 
@@ -170,7 +180,14 @@ def test_dump_no_deja_cerrar_el_bloque():
         (d / "DECISIONES.md").write_text("x")
         dump = corrector.construir_dump(str(d), d)
         check("el delimitador es único e impredecible", len(dump.get("marca", "")) >= 8)
-        check("el contenido ya no va entre fences adivinables", "```\n" not in dump["text"].replace("\n```\n", "", 0) or "<<<ARCHIVO" in dump["text"])
+        # Antes esto pasaba por short-circuit: el `or` con "<<<ARCHIVO" hacía verdadera
+        # toda la expresión sin llegar a probar nada sobre los fences.
+        marca = dump["marca"]
+        check("cada archivo va entre las marcas únicas de esta corrida",
+              f"<<<ARCHIVO README.md {marca}>>>" in dump["text"]
+              and f"<<<FIN README.md {marca}>>>" in dump["text"])
+        check("el fence del alumno no puede cerrar el bloque",
+              dump["text"].count(f"<<<FIN README.md {marca}>>>") == 1)
         check("la suplantación se detecta como alerta",
               any(a["tipo"] == "suplantacion_de_herramienta" for a in dump["alertasSeguridad"]))
 
@@ -184,6 +201,9 @@ def test_parser_tolera_el_formato_del_modelo():
                  "ronda2_flojo": (44, ["B1"]), "ronda2_tramposo": (37, ["B1", "B2b", "B3", "B4"])}
     for nombre, (total, banderas) in esperados.items():
         f = REPO / "correcciones" / f"{nombre}.md"
+        # Sin este check, un archivo borrado hacía que el test saltara la
+        # comprobación y siguiera reportando verde.
+        check(f"{nombre}: la salida cruda existe", f.exists())
         if not f.exists():
             continue
         r = validador.parse_correccion(f.read_text())
@@ -372,7 +392,7 @@ def test_import_de_backup_no_inyecta():
 
 
 if __name__ == "__main__":
-    for t in (test_b6_no_se_fabrica_con_clon_superficial, test_b6_detecta_fechas_retroactivas,
+    for t in (test_b6_no_se_fabrica_con_clon_superficial, test_b6_informa_la_divergencia_sin_acusar,
               test_el_recorte_no_saltea_el_escaneo, test_forense_distingue_ataque_de_notacion,
               test_dump_encuentra_la_entrega_en_subcarpeta, test_dump_no_deja_cerrar_el_bloque,
               test_parser_tolera_el_formato_del_modelo, test_casos_extra_ejercitan_lo_que_prometen,
