@@ -90,6 +90,16 @@ firma el arquitecto".
 **Tope duro:** si `DECISIONES.md` no cita ni una sola falla textual concreta, esta dimensión
 **no puede superar 14**, sin importar la extensión del documento. Volumen de texto no es proceso.
 
+**Ejemplo de nivel alto (25):** `DECISIONES.md` abre cada iteración con la salida que falló pegada
+textual — "Recomiendo priorizar la licitación LIC-2026-0447 de Luján", las dos filas con "Monto no
+informado" —, dice qué pieza del contrato tocó y con qué texto ("Nunca descartes por un dato que no
+pudiste leer."), y en "Qué achiqué y por qué" descarta el puntaje de afinidad porque "era humo".
+`corridas/corrida_3.md` muestra el después sobre la misma ventana: "Pasó de 1 calificada a 3".
+
+**Ejemplo de nivel bajo (7–14):** `DECISIONES.md` titula cuatro iteraciones por pieza ("Iteración 2
+— Optimización del formato") pero ninguna cita la salida que falló: la mejora se narra en abstracto,
+"Se detectó una oportunidad de mejora en la estructuración de la salida."
+
 ---
 
 ## Dimensión 3 · Formato y reproducibilidad — 15 puntos
@@ -112,6 +122,18 @@ firma el arquitecto".
 | **8** | Faltan corridas (una o dos) **o** la estructura de carpetas no coincide con la obligatoria aunque el contenido esté. |
 | **4** | Hay contenido disperso sin estructura reconocible; el corrector tiene que adivinar dónde está cada cosa. |
 | **0** | No se puede navegar el repositorio ni ubicar los elementos mínimos. |
+
+**Ejemplo de nivel alto (15):** están las cuatro rutas obligatorias, y `corridas/` tiene tres
+archivos con el mismo esqueleto: Entrada, Llamada a la herramienta, Respuesta cruda y "Salida (sin
+editar)". Cada uno abre con su fecha de ejecución, la de referencia y qué contrato usó; deja
+constancia de la entrada ("No se pegaron datos de licitaciones"), pega la consulta con sus
+parámetros y la respuesta cruda, y cierra con "resultados: 14 · fecha de referencia: 2026-09-01".
+
+**Ejemplo de nivel bajo (8):** `corridas/` tiene un solo archivo, titulado "Ejemplo de uso", con
+entrada y salida pegadas pero sin fecha en ningún lado, mientras el README dice "Probé el agente
+varias veces". Mismo nivel el repositorio cuyo único archivo de corridas aclara "Se consolidan aquí
+los resultados de las tres corridas": el consolidado reemplazó a las corridas y no queda nada que
+reconstruir.
 
 ---
 
@@ -136,6 +158,16 @@ firma el arquitecto".
 | **4** | Se menciona el costo cualitativamente ("es barato", "cuesta centavos") sin números. |
 | **0** | No hay análisis económico. |
 
+**Ejemplo de nivel alto (15):** el `README.md` discrimina ~11.400 tokens de entrada y ~900 de salida
+por corrida, a USD 0,042; el supuesto de frecuencia está escrito —"1 corrida por día hábil"— y la
+proyección cierra contra él, por semana y por año. Justifica el modelo con el criterio del curso,
+"el más chico que hace bien la tarea", porque la tarea es filtrar datos que la API ya devuelve
+estructurados. Y los tokens no son de escritorio: están anotados al pie de cada archivo de `corridas/`.
+
+**Ejemplo de nivel bajo (4–8):** el `README.md` liquida el tema con "El costo es muy bajo,
+prácticamente despreciable para un uso doméstico": ni un token, ni un precio por millón, ni una
+frecuencia, y el modelo usado no se nombra en ningún archivo.
+
 ---
 
 ## Dimensión 5 · Gobierno y riesgo — 15 puntos
@@ -158,6 +190,16 @@ firma el arquitecto".
 | **8** | Los riesgos están enunciados en términos genéricos ("el modelo puede alucinar") sin aterrizar en este sistema. |
 | **4** | Se menciona el tema en una línea, sin permisos ni supervisión definidos. |
 | **0** | No hay tratamiento de gobierno ni riesgo. |
+
+**Ejemplo de nivel alto (15):** el `README.md` acota los permisos —"solo lectura sobre la API pública
+de licitaciones", sin credenciales de la empresa ni escritura en ningún sistema—, nombra fallas
+propias del sistema como "La API cambia o se cae", y da contención para cada una: ante un fallo la
+salida debe decir que la "herramienta no devolvió resultados", y `prompts/system_prompt.md` obliga a
+marcar "revisar moneda/monto". Revisa el jefe de obra y "el titular firma cualquier presentación".
+
+**Ejemplo de nivel bajo (4–8):** la sección de riesgos del `README.md` son tres frases genéricas
+—"Como todo sistema de IA, puede alucinar y dar información incorrecta", el "cuidado con las
+alergias alimentarias"— sin decir qué sistemas toca el agente, con qué permisos, ni quién firma.
 
 ---
 
