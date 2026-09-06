@@ -20,7 +20,24 @@ _RE_DIM_NUM = re.compile(r"(\d)\s*[·.\-]")
 _RE_TOTAL = re.compile(r"Puntaje\s+total:?\s*\**\s*(\d+)\s*/\s*100", re.IGNORECASE)
 _RE_BANDERAS_HEADER = re.compile(r"##\s*Banderas", re.IGNORECASE)
 _RE_NEXT_HEADER = re.compile(r"\n##\s")
-_RE_BANDERA_ITEM = re.compile(r"^\s*[-*]?\s*\**\s*(B(?:1|2a|2b|2|3|4|5|6))\b\s*[·:\-]", re.MULTILINE)
+# Separadores admitidos después del código de bandera: el modelo alterna entre
+# medio punto, dos puntos, guion corto, guion largo y raya. Anclarse a uno solo
+# produce falsos negativos silenciosos — exactamente el bug de la Ronda 4, donde
+# el regex conocía B1..B5 y descartaba cada B6 sin avisar (ver calibracion.md).
+_RE_BANDERA_ITEM = re.compile(
+    r"^\s*[-*]?\s*(B(?:2a|2b|1|2|3|4|5|6))\b\s*[·:.\-\u2010-\u2015]", re.MULTILINE
+)
+
+
+def _limpiar_markdown(texto: str) -> str:
+    """Saca el énfasis y los backticks antes de aplicar los regex de extracción.
+
+    El contrato pide un formato fijo, pero el modelo lo decora: escribe
+    `**24**/30`, `` `B6` `` o `**B2b** —`. El parser no puede depender de que
+    no lo haga: un puntaje que no matchea se cuenta como dimensión faltante y
+    una bandera que no matchea desaparece del informe con la misma confianza
+    con la que se reporta una real."""
+    return texto.replace("**", "").replace("__", "").replace("`", "")
 _RE_NINGUNA_BANDERA = re.compile(r"ninguna\s+bandera", re.IGNORECASE)
 _RE_SUGERENCIA = re.compile(r"##\s*Sugerencia", re.IGNORECASE)
 _RE_RUTA = re.compile(r"([\w\-./]+\.(md|txt|json|csv|ya?ml|py|js))|((prompts|corridas|casos|agente)/)", re.IGNORECASE)
@@ -38,12 +55,14 @@ def parse_correccion(texto: str) -> dict:
         "raw": texto,
     }
 
-    m = _RE_ARCHIVOS_LEIDOS.search(texto)
+    texto_limpio = _limpiar_markdown(texto)
+
+    m = _RE_ARCHIVOS_LEIDOS.search(texto_limpio)
     out["archivosLeidos"] = int(m.group(1)) if m else None
 
     filas = [l for l in texto.split("\n") if l.strip().startswith("|")]
     for fila in filas:
-        celdas = [c.strip() for c in fila.split("|")[1:-1]]
+        celdas = [_limpiar_markdown(c).strip() for c in fila.split("|")[1:-1]]
         if len(celdas) < 2:
             continue
         m_score = _RE_DIM_SCORE.search(celdas[1] or "")
@@ -59,17 +78,17 @@ def parse_correccion(texto: str) -> dict:
             "just": celdas[2] if len(celdas) > 2 else "",
         })
 
-    m_total = _RE_TOTAL.search(texto)
+    m_total = _RE_TOTAL.search(texto_limpio)
     if m_total:
         out["total"] = int(m_total.group(1))
     elif len(out["dims"]) == 5:
         out["total"] = sum(d["score"] for d in out["dims"])
 
-    m_band = _RE_BANDERAS_HEADER.search(texto)
+    m_band = _RE_BANDERAS_HEADER.search(texto_limpio)
     if m_band:
-        resto = texto[m_band.end():]
+        resto = texto_limpio[m_band.end():]
         m_next = _RE_NEXT_HEADER.search(resto)
-        bloque = texto[m_band.start():m_band.end() + (m_next.start() if m_next else len(resto))]
+        bloque = texto_limpio[m_band.start():m_band.end() + (m_next.start() if m_next else len(resto))]
         vistas = []
         for mb in _RE_BANDERA_ITEM.finditer(bloque):
             if mb.group(1) not in vistas:
@@ -79,7 +98,7 @@ def parse_correccion(texto: str) -> dict:
     else:
         out["sinSeccionBanderas"] = True
 
-    out["tieneSugerencia"] = bool(_RE_SUGERENCIA.search(texto))
+    out["tieneSugerencia"] = bool(_RE_SUGERENCIA.search(texto_limpio))
     return out
 
 

@@ -67,6 +67,17 @@ class Handler(BaseHTTPRequestHandler):
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 
     # ---------- helpers de request/response ----------
+    def _origen_propio(self) -> bool:
+        """Solo acepta pedidos originados en el propio panel. El servidor
+        escucha en 127.0.0.1, pero eso no impide que una página cualquiera
+        abierta en el mismo navegador le mande un POST: lo que lo impide es
+        mirar Origin/Referer."""
+        origen = self.headers.get("Origin") or self.headers.get("Referer") or ""
+        if not origen:
+            return True  # cliente no-navegador (curl, tests): no hay CSRF posible
+        host = self.headers.get("Host") or ""
+        return any(origen.startswith(f"http://{h}") for h in (host, "127.0.0.1", "localhost"))
+
     def _session_token(self) -> str | None:
         raw = self.headers.get("Cookie")
         if not raw:
@@ -250,6 +261,16 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if route == "/api/auth/reset":
+            # Este endpoint borra TODO (credenciales, proyectos, correcciones).
+            # Estaba antes del chequeo de sesión, así que cualquier página
+            # abierta en el mismo navegador podía dispararlo con un POST simple
+            # y dejar el panel en blanco en medio de una corrida. Ahora exige
+            # sesión y que el pedido venga del propio panel.
+            if not self._require_session():
+                return
+            if not self._origen_propio():
+                self._send_json({"error": "Origen no permitido."}, status=403)
+                return
             body = self._read_json_body()
             if body.get("confirm") is not True:
                 self._send_json({"error": "Falta confirmar."}, status=400)
@@ -407,7 +428,12 @@ class Handler(BaseHTTPRequestHandler):
             proc = subprocess.run(
                 # "--" le dice a git que lo que sigue son argumentos posicionales,
                 # nunca opciones, aunque url o destino empezaran con "-".
-                ["git", "clone", "--depth", "1", "--", url, str(destino)],
+                # Clon COMPLETO a propósito: `--depth 1` traía un solo commit y dejaba
+                # el historial en 1 commit / 1 autor / 0 días de spread, que es
+                # exactamente el patrón que la bandera B6 busca — el panel fabricaba
+                # la contradicción que después denunciaba. Los repos de la materia
+                # son chicos; el historial completo es la evidencia, no un extra.
+                ["git", "clone", "--", url, str(destino)],
                 capture_output=True, text=True, timeout=120,
             )
         except FileNotFoundError:

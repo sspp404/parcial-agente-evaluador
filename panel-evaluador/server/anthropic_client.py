@@ -11,6 +11,7 @@ corridas seguidas (calibración, prueba de fuego), esto es la diferencia más
 grande en costo, más que cualquier recorte de contenido del repo evaluado.
 """
 import json
+import time
 import urllib.error
 import urllib.request
 
@@ -72,22 +73,39 @@ def call(
             "anthropic-version": ANTHROPIC_VERSION,
         },
     )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        msg = f"HTTP {e.code}"
+    # Un 429 (rate limit) o un 529 (sobrecarga) son transitorios: sin reintento,
+    # una corrida se pierde entera por un pico de tráfico ajeno. En la prueba de
+    # fuego, con varias correcciones seguidas, eso es cuestión de tiempo.
+    ESPERAS = (2, 6, 15)
+    ultimo_error = None
+    for intento in range(len(ESPERAS) + 1):
         try:
-            j = json.loads(e.read().decode("utf-8"))
-            if j.get("error", {}).get("message"):
-                msg += " — " + j["error"]["message"]
-        except Exception:
-            pass
-        raise AnthropicError(msg)
-    except urllib.error.URLError as e:
-        raise AnthropicError(f"No se pudo conectar con Anthropic: {e.reason}")
-    except TimeoutError:
-        raise AnthropicError("Anthropic no respondió a tiempo (timeout).")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as e:
+            msg = f"HTTP {e.code}"
+            try:
+                j = json.loads(e.read().decode("utf-8"))
+                if j.get("error", {}).get("message"):
+                    msg += " — " + j["error"]["message"]
+            except Exception:
+                pass
+            if e.code in (429, 500, 502, 503, 529) and intento < len(ESPERAS):
+                ultimo_error = msg
+                time.sleep(ESPERAS[intento])
+                continue
+            raise AnthropicError(msg)
+        except urllib.error.URLError as e:
+            if intento < len(ESPERAS):
+                ultimo_error = f"No se pudo conectar con Anthropic: {e.reason}"
+                time.sleep(ESPERAS[intento])
+                continue
+            raise AnthropicError(f"No se pudo conectar con Anthropic: {e.reason}")
+        except TimeoutError:
+            raise AnthropicError("Anthropic no respondió a tiempo (timeout).")
+    else:
+        raise AnthropicError(ultimo_error or "Anthropic no respondió tras varios intentos.")
 
     text = "\n".join(c.get("text", "") for c in data.get("content", []))
     stop_reason = data.get("stop_reason")
