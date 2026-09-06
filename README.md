@@ -6,13 +6,21 @@
 
 | Nombre | Rol en el grupo |
 |---|---|
-| Sebastian Nazarian | Diseño de la rúbrica ejecutable y del contrato del corrector, los tres casos de prueba, las cuatro rondas de calibración y el panel evaluador. Autor de los commits `3d9a…`–`983d21d`. |
-| Santiago Paris | Auditoría del corrector previa a la prueba de fuego y corrección de los hallazgos: clon superficial que falseaba B6, filtro del dump, falsos positivos del escaneo forense, fuga del delimitador, tolerancia del parser y bugs del panel. Autor de los commits de la rama `fix/auditoria-pre-prueba-de-fuego`. |
+| Sebastian Nazarian | Construcción conjunta del agente evaluador: rúbrica ejecutable, contrato del corrector, los tres casos de prueba, las cuatro rondas de calibración y el panel. |
+| Santiago Paris | Construcción conjunta de lo anterior. Además, auditoría del corrector previa a la prueba de fuego y corrección de los hallazgos: el clon superficial que falseaba B6, el filtro del dump, los falsos positivos del escaneo forense, la fuga del delimitador, la tolerancia del parser y los bugs del panel. |
 
-**Sobre el historial de commits.** Los commits hasta el 2026-09-06 tienen un solo autor,
-Sebastian Nazarian; los de la auditoría posterior, Santiago Paris. <!-- PENDIENTE: completar acá
-cómo se repartió efectivamente el trabajo en esa primera etapa. Tiene que escribirlo alguien del
-grupo: es un hecho sobre cómo trabajaron, no algo que se deduzca del repositorio. -->
+**Sobre el historial de commits.** El sistema se construyó **de a dos, trabajando juntos**, pero
+los commits hasta el 2026-09-06 los firmó una sola persona: se commiteaba desde una sola máquina.
+Los de la auditoría posterior sí están firmados por su autor.
+
+Es una diferencia que importa en un trabajo cuya tesis es *puntuar solo lo verificable*: durante
+esa primera etapa el historial no muestra el reparto real. Lo declaramos acá en vez de dejar que
+se deduzca mal en cualquiera de las dos direcciones.
+
+<!-- PENDIENTE: correr la reescritura de historial que agrega Co-Authored-By a los commits
+     anteriores al 2026-09-06 y, cuando esté hecha, reemplazar el párrafo de arriba por la
+     versión que dice que el historial ya lo refleja. Mientras no esté hecha, este texto es el
+     que corresponde: describe el repositorio como está, no como va a quedar. -->
 
 ## Qué construimos
 
