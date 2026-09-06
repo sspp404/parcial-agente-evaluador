@@ -29,7 +29,14 @@ casos/flojo/       — caso de prueba 2: asistente de recetas
 casos/tramposo/    — caso de prueba 3: "SentimentOps™" de análisis de reseñas
 calibracion.md     — desacuerdos encontrados, ajustes hechos, resultado
 correcciones/      — las salidas reales del corrector sobre los tres casos
+panel-evaluador/   — opcional: la app que usamos para operar el corrector (ver su propio README)
 ```
+
+`panel-evaluador/` **no es parte de la entrega formal** — el corrector completo son las cuatro
+piezas de arriba, usables pegando `agente/system_prompt.md` en cualquier chat. Esa carpeta es
+la herramienta que construimos para correrlo más cómodo, y se puede clonar y probar aparte: no
+tiene ninguna key ni dato sensible, solo necesita Python. Instrucciones en
+[`panel-evaluador/README.md`](panel-evaluador/README.md).
 
 ## Cómo se corre
 

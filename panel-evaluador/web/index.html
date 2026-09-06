@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel del agente evaluador</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<!-- ============================================================ LOGIN -->
+<div id="login">
+  <div class="login-card">
+    <div class="login-logo">E</div>
+    <h1 id="login-title">Panel del agente evaluador</h1>
+    <div class="sub" id="login-sub">Acceso de administrador</div>
+
+    <div id="login-setup" style="display:none">
+      <div class="field"><label>Elegí una contraseña de acceso</label><input id="pass-new" type="password" placeholder="••••••••"></div>
+      <div class="field"><label>Repetila</label><input id="pass-new2" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')Auth.setup()"></div>
+      <button class="btn w" id="btn-setup" onclick="Auth.setup()">Crear acceso</button>
+    </div>
+
+    <div id="login-enter" style="display:none">
+      <div class="field"><label>Contraseña</label><input id="pass-in" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')Auth.login()"></div>
+      <button class="btn w" id="btn-login" onclick="Auth.login()">Entrar</button>
+    </div>
+
+    <div class="login-err" id="login-err"></div>
+    <div class="login-hint">
+      Esta contraseña solo abre el panel en esta máquina — la valida el backend local, no viaja a
+      ningún lado. La API key de Anthropic no se guarda acá: la sirve Doppler en el momento
+      (ver "Configuración API" una vez adentro).
+      <div style="margin-top:8px"><a href="#" onclick="Auth.reset();return false" style="color:var(--tx3)">Borrar todo y empezar de cero</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ APP -->
+<div id="app">
+  <div class="sidebar">
+    <div class="brand"><div class="logo"></div><div><b>Agente evaluador</b><span>Parcial · MBA UCEMA</span></div></div>
+    <nav>
+      <div class="navitem" data-view="dashboard" onclick="Router.go('dashboard')"><span class="ic">◆</span> Dashboard</div>
+      <div class="navitem" data-view="proyectos" onclick="Router.go('proyectos')"><span class="ic">▤</span> Proyectos <span class="badge" id="nb-proyectos">0</span></div>
+      <div class="navitem" data-view="nueva" onclick="Router.go('nueva')"><span class="ic">＋</span> Nueva corrección</div>
+      <div class="navitem" data-view="rubrica" onclick="Router.go('rubrica')"><span class="ic">📐</span> Rúbrica</div>
+      <div class="navitem" data-view="lote" onclick="Router.go('lote')"><span class="ic">⚡</span> Lote</div>
+      <div class="navitem" data-view="resultados" onclick="Router.go('resultados')"><span class="ic">≡</span> Resultados <span class="badge" id="nb-resultados">0</span></div>
+      <div class="navitem" data-view="comparar" onclick="Router.go('comparar')"><span class="ic">⇄</span> Comparar / lote</div>
+      <div class="navitem" data-view="datos" onclick="Router.go('datos')"><span class="ic">⇵</span> Exportar / Importar</div>
+      <div class="navitem" data-view="config" onclick="Router.go('config')"><span class="ic">⚙</span> Configuración API</div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="theme-toggle" id="theme-toggle">
+        <button data-t="light" onclick="Theme.set('light')">☀</button>
+        <button data-t="dark" onclick="Theme.set('dark')">☾</button>
+        <button data-t="system" onclick="Theme.set('system')">Auto</button>
+      </div>
+      <div class="who"><span class="dot"></span> admin</div>
+      <div class="row" style="padding:0 8px">
+        <button class="btn sec sm" style="width:100%" onclick="Auth.logout()">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+
+  <main>
+
+    <!-- ---------------- DASHBOARD ---------------- -->
+    <div class="view" id="v-dashboard">
+      <div class="pagehead"><div><h1>Dashboard</h1><div class="sub">Estado general de las correcciones del grupo</div></div></div>
+      <div class="grid g4" style="margin-bottom:16px">
+        <div class="stat"><div class="n" id="s-total">0</div><div class="l">Correcciones corridas</div></div>
+        <div class="stat"><div class="n" id="s-prom">—</div><div class="l">Promedio general</div><div class="l2" id="s-prom2"></div></div>
+        <div class="stat"><div class="n" id="s-valid">—</div><div class="l">Válidas al formato</div><div class="l2" id="s-valid2"></div></div>
+        <div class="stat"><div class="n" id="s-flags">0</div><div class="l">Banderas detectadas</div><div class="l2" id="s-flags2"></div></div>
+      </div>
+      <div class="grid g2">
+        <div class="card">
+          <h2>Distribución por rango</h2>
+          <div id="dash-rangos" style="margin-top:14px"><div class="empty">Todavía no hay correcciones cargadas.</div></div>
+        </div>
+        <div class="card">
+          <h2>Últimas corridas</h2>
+          <div id="dash-ultimas" style="margin-top:6px"><div class="empty">Nada por ahora — cargá una en "Nueva corrección".</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------- PROYECTOS ---------------- -->
+    <div class="view" id="v-proyectos">
+      <div class="pagehead"><div><h1>Proyectos</h1><div class="sub">Los trabajos que tu grupo va a corregir (los tuyos de prueba y los reales de la prueba de fuego)</div></div>
+        <button class="btn" onclick="Proyectos.abrirModal()">＋ Nuevo proyecto</button>
+      </div>
+      <div class="card"><div id="tabla-proyectos"></div></div>
+    </div>
+
+    <!-- ---------------- NUEVA CORRECCIÓN ---------------- -->
+    <div class="view" id="v-nueva">
+      <div class="pagehead"><div><h1>Nueva corrección</h1><div class="sub">Elegí proyecto y fecha, y corré la corrección automática o manualmente</div></div></div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="row" style="justify-content:space-between; flex-wrap:wrap">
+          <div class="row" style="gap:18px">
+            <label class="checkline"><input type="radio" name="nc-modo" value="auto" checked onchange="Nueva.cambiarModo()"><b>Automático</b> — la app corre el agente por vos</label>
+            <label class="checkline"><input type="radio" name="nc-modo" value="manual" onchange="Nueva.cambiarModo()"><b>Manual</b> — copiar/pegar</label>
+          </div>
+          <span class="hint" id="corrector-status">verificando corrector…</span>
+        </div>
+      </div>
+
+      <div class="grid g2">
+        <div class="card">
+          <h2><span class="step-badge">1</span>Proyecto y fecha</h2>
+          <div class="field2" style="margin-top:12px"><label class="lbl">Proyecto</label>
+            <select class="inp" id="nc-proyecto" onchange="Nueva.onProyectoChange()"></select>
+            <div class="hint">Si no está en la lista, creálo primero en "Proyectos".</div>
+          </div>
+          <div class="field2"><label class="lbl">Fecha de corrección</label><input class="inp" id="nc-fecha" type="date" onchange="Nueva.render()"></div>
+
+          <!-- ---- modo MANUAL ---- -->
+          <div id="modo-manual" style="display:none">
+            <h2 style="margin-top:20px"><span class="step-badge">2</span>Traer el repositorio</h2>
+            <pre class="code-block" id="nc-cmd"></pre>
+            <div class="row" style="margin-top:10px"><button class="btn sec sm" onclick="UI.copiar('nc-cmd')">Copiar comandos</button></div>
+
+            <h2 style="margin-top:20px"><span class="step-badge">3</span>Mensaje para el agente</h2>
+            <pre class="code-block" id="nc-prompt"></pre>
+            <div class="row" style="margin-top:10px"><button class="btn sm" onclick="UI.copiar('nc-prompt')">Copiar mensaje</button></div>
+            <div class="hint" style="margin-top:8px">Sesión limpia por cada corrección: no reuses una conversación donde ya corregiste otro trabajo.</div>
+          </div>
+
+          <!-- ---- modo AUTOMÁTICO ---- -->
+          <div id="modo-auto">
+            <h2 style="margin-top:20px"><span class="step-badge">2</span>Carpeta del proyecto</h2>
+            <div id="nc-carpeta-info" class="hint">Elegí un proyecto para ver su carpeta.</div>
+            <div class="row" style="margin-top:10px" id="nc-clone-row"></div>
+
+            <button class="btn w" id="btn-auto" style="margin-top:16px" onclick="Nueva.correrAutomatico()" disabled>Correr corrección automáticamente</button>
+            <div class="hint" id="auto-hint" style="margin-top:8px"></div>
+            <div id="nc-forense" style="margin-top:12px"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="justify-content:space-between">
+            <h2>Pegá o revisá la corrección</h2>
+            <div class="row">
+              <button class="btn sm" id="nc-tab-editar" onclick="Nueva.mostrarModoSalida('editar')">✎ Editar</button>
+              <button class="btn sec sm" id="nc-tab-vista" onclick="Nueva.mostrarModoSalida('vista')">👁 Vista previa</button>
+            </div>
+          </div>
+          <textarea class="inp" id="nc-salida" rows="16" style="margin-top:10px" placeholder="# Corrección — ...&#10;&#10;**Puntaje total: 97/100 — ...**&#10;..." oninput="Nueva.onSalidaInput()"></textarea>
+          <div id="nc-vista" class="md-view" style="display:none;margin-top:10px;max-height:420px;overflow:auto;padding:14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-sunken)"></div>
+          <div id="nc-val" style="margin-top:14px"></div>
+          <div class="row" style="margin-top:14px">
+            <button class="btn" id="nc-guardar" onclick="Nueva.guardar()" disabled>Guardar corrección</button>
+            <span class="hint" id="nc-guardar-hint"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------- LOTE ---------------- -->
+    <div class="view" id="v-lote">
+      <div class="pagehead"><div><h1>Lote</h1><div class="sub">Corré varios proyectos seguidos — pensado para la prueba de fuego, cuando hay muchos repos que corregir</div></div></div>
+      <div class="grid g2">
+        <div class="card">
+          <h2>Elegí los proyectos</h2>
+          <div id="lote-lista" style="margin-top:10px"></div>
+          <div class="field2" style="margin-top:14px"><label class="lbl">Fecha de corrección</label><input class="inp" id="lote-fecha" type="date"></div>
+          <button class="btn w" id="lote-btn" style="margin-top:6px" onclick="Lote.correr()" disabled>Evaluar seleccionados</button>
+          <div class="hint" id="lote-hint" style="margin-top:8px">Corren de a uno, en orden — así el caché de la rúbrica se aprovecha entre corrida y corrida.</div>
+        </div>
+        <div class="card">
+          <h2>Progreso</h2>
+          <div class="row" style="margin:10px 0"><div class="bar-track" style="flex:1"><div class="bar-fill" id="lote-progreso-fill" style="width:0%;background:var(--accent)"></div></div><div class="bar-val" id="lote-progreso-txt" style="width:auto;margin-left:8px">0/0</div></div>
+          <div id="lote-resultados"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------- RÚBRICA ---------------- -->
+    <div class="view" id="v-rubrica">
+      <div class="pagehead">
+        <div><h1>Rúbrica</h1><div class="sub">Contra qué se corrige — la misma que usa el corrector en cada corrida</div></div>
+        <div class="row">
+          <button class="btn sec sm" id="rb-tab-rubrica" onclick="Rubrica.mostrar('rubrica')">rubrica.md</button>
+          <button class="btn sec sm" id="rb-tab-system" onclick="Rubrica.mostrar('system')">system_prompt.md</button>
+        </div>
+      </div>
+      <div class="card"><div id="rb-contenido" class="md-view"><div class="skeleton" style="height:300px"></div></div></div>
+    </div>
+
+    <!-- ---------------- RESULTADOS ---------------- -->
+    <div class="view" id="v-resultados">
+      <div class="pagehead">
+        <div><h1>Resultados</h1><div class="sub">Todas las correcciones guardadas</div></div>
+        <div class="row"><select class="inp" id="res-filtro" onchange="Resultados.render()" style="width:220px"></select><span class="hint" id="res-count"></span></div>
+      </div>
+      <div class="card"><div id="tabla-resultados"></div></div>
+    </div>
+
+    <!-- ---------------- COMPARAR ---------------- -->
+    <div class="view" id="v-comparar">
+      <div class="pagehead"><div><h1>Comparar / lote</h1><div class="sub">Elegí dos o más correcciones para ver puntajes lado a lado</div></div></div>
+      <div class="grid g2">
+        <div class="card"><h2>Correcciones</h2><div id="comparar-lista" style="margin-top:10px"></div></div>
+        <div id="comparar-resultado"></div>
+      </div>
+    </div>
+
+    <!-- ---------------- DATOS ---------------- -->
+    <div class="view" id="v-datos">
+      <div class="pagehead"><div><h1>Exportar / Importar</h1><div class="sub">Backup local, o pasarle el estado a un compañero de grupo</div></div></div>
+      <div class="grid g2">
+        <div class="card">
+          <h2>Exportar</h2>
+          <p class="hint" style="margin:8px 0 14px">Descarga un .json con todos los proyectos y correcciones guardados en este backend.</p>
+          <button class="btn" onclick="Datos.exportar()">Descargar backup</button>
+        </div>
+        <div class="card">
+          <h2>Importar</h2>
+          <p class="hint" style="margin:8px 0 14px">Subí un .json exportado por esta misma app (tuyo o de un compañero).</p>
+          <input class="inp" type="file" id="import-file" accept=".json" style="margin-bottom:12px">
+          <div class="row"><button class="btn sec" onclick="Datos.importar('merge')">Combinar</button><button class="btn danger" onclick="Datos.importar('replace')">Reemplazar todo</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------- CONFIG ---------------- -->
+    <div class="view" id="v-config">
+      <div class="pagehead"><div><h1>Configuración API</h1><div class="sub">La API key de Anthropic la sirve Doppler — acá no se guarda en ningún archivo del repo</div></div></div>
+      <div class="grid g2">
+        <div class="card">
+          <h2>Estado de Doppler</h2>
+          <div id="doppler-status" style="margin-top:12px"></div>
+          <button class="btn sec sm" style="margin-top:12px" onclick="Config.probar()">Probar conexión</button>
+        </div>
+        <div class="card">
+          <h2>Cargar token manualmente</h2>
+          <p class="hint" style="margin:8px 0 14px">
+            Alternativa a la variable de entorno <code>DOPPLER_TOKEN</code>: pegá acá un
+            Service Token de solo lectura generado en dashboard.doppler.com. Se guarda en un
+            archivo local fuera del repo — no en la nube, no en el código.
+          </p>
+          <div class="field2"><input class="inp" id="cfg-doppler-token" type="password" placeholder="dp.st...."></div>
+          <button class="btn" onclick="Config.guardarToken()">Guardar token</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Zona de riesgo</h2>
+        <p class="hint" style="margin:8px 0 14px">Borra la contraseña de acceso, todos los proyectos, todas las correcciones y el token local de Doppler guardado en esta máquina.</p>
+        <button class="btn danger" onclick="Auth.reset()">Borrar todo y empezar de cero</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="modal-root"></div>
+<div id="toasts"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

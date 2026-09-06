@@ -1,3 +1,6 @@
-# Herramientas de trabajo local, no son parte de la entrega del parcial.
-# Panel HTML de gestión y la guía operativa de "cómo correr" — quedan afuera del repo público.
-herramientas-locales-no-subir/
+# panel-evaluador/ SÍ se sube (es la herramienta operativa opcional, no la
+# entrega formal del parcial) — pero nunca sus datos locales ni secretos.
+panel-evaluador/data/
+panel-evaluador/casos-extra/
+panel-evaluador/server/__pycache__/
+panel-evaluador/**/__pycache__/
