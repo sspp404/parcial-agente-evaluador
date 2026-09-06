@@ -836,6 +836,9 @@ const Lote = {
   corriendo: false,
   detenerPedido: false,
   seleccionados: new Set(),
+  salidas: {}, // id -> texto crudo de la última corrida de esa fila (para "Ver salida",
+               // incluso cuando dio "formato inválido" o error — antes se perdía sin
+               // dejar rastro apenas terminaba el lote).
 
   render(){
     const box = document.getElementById('lote-lista');
@@ -872,6 +875,34 @@ const Lote = {
   },
   _fmtSeg(s){ return s < 60 ? `${Math.round(s)}s` : `${Math.floor(s/60)}m ${Math.round(s%60)}s`; },
 
+  /** Plantilla rápida: asegura que los 3 casos oficiales del repo (ya están
+   * en casos/excelente, casos/flojo, casos/tramposo, ya calibrados) existan
+   * como proyecto y los selecciona — para probar el lote de punta a punta
+   * sin tener que darlos de alta a mano cada vez. Es idempotente: si ya
+   * existen (por ruta), no los duplica. */
+  async cargarCasosOficiales(){
+    const CASOS = [
+      {nombre:'Caso oficial — Excelente', ruta:'casos/excelente'},
+      {nombre:'Caso oficial — Flojo', ruta:'casos/flojo'},
+      {nombre:'Caso oficial — Tramposo', ruta:'casos/tramposo'},
+    ];
+    try{
+      for(const c of CASOS){
+        let p = STATE.projects.find(x => x.ruta === c.ruta);
+        if(!p){
+          const r = await Api.post('/api/projects', {nombre:c.nombre, origen:'zip', ruta:c.ruta});
+          p = r.project;
+          STATE.projects.push(p);
+        }
+        this.seleccionados.add(p.id);
+      }
+      await refreshProjects();
+      this.render();
+      updateNavBadges();
+      UI.toast('Casos oficiales listos y seleccionados.', 'ok', 3000);
+    }catch(e){ UI.toast(e.message, 'bad', 6000); }
+  },
+
   async correr(){
     const ids = [...this.seleccionados];
     if(!ids.length) return;
@@ -880,6 +911,7 @@ const Lote = {
 
     this.corriendo = true;
     this.detenerPedido = false;
+    this.salidas = {};
     document.getElementById('lote-btn').disabled = true;
     document.getElementById('lote-btn-detener').style.display = 'inline-flex';
     document.getElementById('lote-btn-detener').disabled = false;
@@ -891,14 +923,21 @@ const Lote = {
     document.getElementById('lote-progreso-txt').textContent = `0/${ids.length}`;
     document.getElementById('lote-tiempo').textContent = 'Arrancando… cada corrida real puede tardar entre 20 segundos y 2 minutos — no cierres esta pestaña.';
 
+    document.getElementById('lote-s-total').textContent = ids.length;
+    document.getElementById('lote-s-hechos').textContent = `0/${ids.length}`;
+    document.getElementById('lote-s-prom').textContent = '—';
+    document.getElementById('lote-s-estado').textContent = 'Corriendo';
+    document.getElementById('lote-s-estado2').textContent = '';
+
     const resBox = document.getElementById('lote-resultados');
-    resBox.innerHTML = `<table><tr><th>Proyecto</th><th>Estado</th><th>Tiempo</th></tr>
+    resBox.innerHTML = `<table><tr><th>Proyecto</th><th>Estado</th><th>Tiempo</th><th></th></tr>
       ${ids.map(id=>{
         const p = STATE.projects.find(x=>x.id===id);
-        return `<tr id="lote-row-${id}"><td>${esc(p.nombre)}</td><td><span class="tag t-muted">pendiente</span></td><td class="hint">—</td></tr>`;
+        return `<tr id="lote-row-${id}"><td>${esc(p.nombre)}</td><td><span class="tag t-muted">pendiente</span></td><td class="hint">—</td><td></td></tr>`;
       }).join('')}</table>`;
 
-    let hechos = 0;
+    let hechos = 0, errores = 0;
+    const totales = []; // totales con número calculado (guardados o no), para el promedio en vivo
     const inicio = Date.now();
     const actualizarTiempo = () => {
       const transcurrido = (Date.now()-inicio)/1000;
@@ -912,6 +951,13 @@ const Lote = {
     // haya terminado todavía (antes se quedaba en el mensaje estático de
     // "Arrancando…" durante todo el primer minuto, y se veía como colgado).
     const tick = setInterval(actualizarTiempo, 1000);
+    const actualizarStats = () => {
+      document.getElementById('lote-s-hechos').textContent = `${hechos}/${ids.length}`;
+      const prom = totales.length ? Math.round(totales.reduce((a,b)=>a+b,0)/totales.length) : null;
+      document.getElementById('lote-s-prom').textContent = prom==null ? '—' : `${prom}/100`;
+      document.getElementById('lote-s-estado').textContent = this.detenerPedido ? 'Deteniendo…' : (hechos<ids.length ? 'Corriendo' : 'Listo');
+      document.getElementById('lote-s-estado2').textContent = errores ? `${errores} con error o inválida` : '';
+    };
 
     const correrUno = async (id) => {
       const p = STATE.projects.find(x=>x.id===id);
@@ -920,10 +966,14 @@ const Lote = {
       row.children[1].innerHTML = '<span class="tag t-warn">corriendo…</span>';
       try{
         const res = await Api.post('/api/run/auto', {projectId:id, fecha});
+        this.salidas[id] = res.salida;
+        if(res.validacion.parsed.total != null) totales.push(res.validacion.parsed.total);
         if(res.truncado){
           row.children[1].innerHTML = `<span class="tag t-bad">se cortó por tokens</span>`;
+          errores++;
         } else if(res.validacion.veredicto === 'bad'){
           row.children[1].innerHTML = `<span class="tag t-bad">${res.validacion.parsed.total??'?'}/100 — formato inválido</span>`;
+          errores++;
         } else {
           await Api.post('/api/corrections', {projectId:id, fecha, raw:res.salida});
           const r = rangoDe(res.validacion.parsed.total);
@@ -931,12 +981,15 @@ const Lote = {
         }
       }catch(e){
         row.children[1].innerHTML = `<span class="tag t-bad" title="${esc(e.message)}">error</span>`;
+        errores++;
       }
       row.children[2].textContent = this._fmtSeg((Date.now()-t0)/1000);
+      row.children[3].innerHTML = this.salidas[id] ? `<button class="btn sec sm" onclick="Lote.verSalida('${id}')">Ver salida</button>` : '';
       hechos++;
       document.getElementById('lote-progreso-fill').style.width = Math.round(hechos/ids.length*100)+'%';
       document.getElementById('lote-progreso-txt').textContent = `${hechos}/${ids.length}`;
       actualizarTiempo();
+      actualizarStats();
     };
 
     for(let i=0; i<ids.length; i+=paralelismo){
@@ -953,6 +1006,7 @@ const Lote = {
     document.getElementById('lote-btn-detener').style.display = 'none';
     document.getElementById('lote-filtro').disabled = false;
     actualizarTiempo();
+    actualizarStats();
     document.getElementById('lote-tiempo').textContent += this.detenerPedido ? ' · detenido a pedido' : ' · listo';
     await refreshCorrections();
     updateNavBadges();
@@ -961,6 +1015,22 @@ const Lote = {
   detener(){
     this.detenerPedido = true;
     document.getElementById('lote-btn-detener').disabled = true;
+  },
+  /** Salida cruda de una fila del lote — sirve tanto para repasar una
+   * guardada como para ver qué pasó en una que dio "formato inválido" o
+   * error, que antes no dejaba ningún rastro apenas terminaba el lote. */
+  verSalida(id){
+    const p = STATE.projects.find(x=>x.id===id);
+    const texto = this.salidas[id] || '';
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" onclick="if(event.target===this)UI_closeModal()">
+        <div class="modal" style="max-width:760px">
+          <span class="modal-close" onclick="UI_closeModal()">×</span>
+          <h2 style="margin-top:0">Salida — ${esc(p?p.nombre:id)}</h2>
+          <textarea class="inp" style="width:100%;min-height:360px;font-family:monospace;font-size:12.5px" readonly>${esc(texto)}</textarea>
+        </div>
+      </div>`;
   },
 };
 

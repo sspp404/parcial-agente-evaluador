@@ -174,6 +174,7 @@
             <input class="inp" id="lote-filtro" placeholder="🔍 Buscar por nombre…" style="width:200px" oninput="Lote.render()">
             <button class="btn sec sm" onclick="Lote.marcarTodos(true)">Seleccionar todos</button>
             <button class="btn sec sm" onclick="Lote.marcarTodos(false)">Ninguno</button>
+            <button class="btn sec sm" onclick="Lote.cargarCasosOficiales()" title="Crea (si hace falta) y selecciona los 3 casos de casos/ del repo">📋 Casos oficiales</button>
             <span class="hint" id="lote-contador"></span>
           </div>
           <div class="row" style="flex-wrap:wrap">
@@ -195,6 +196,12 @@
         <div class="row" style="justify-content:space-between">
           <h2 style="margin:0">Progreso</h2>
           <span class="hint" id="lote-tiempo"></span>
+        </div>
+        <div class="grid g4" style="margin:14px 0" id="lote-stats">
+          <div class="stat"><div class="n" id="lote-s-total">—</div><div class="l">Total repositorios</div></div>
+          <div class="stat"><div class="n" id="lote-s-hechos">—</div><div class="l">Progreso completado</div></div>
+          <div class="stat"><div class="n" id="lote-s-prom">—</div><div class="l">Promedio del lote</div></div>
+          <div class="stat"><div class="n" id="lote-s-estado">—</div><div class="l">Estado del lote</div><div class="l2" id="lote-s-estado2"></div></div>
         </div>
         <div class="row" style="margin:10px 0"><div class="bar-track" style="flex:1"><div class="bar-fill" id="lote-progreso-fill" style="width:0%;background:var(--accent)"></div></div><div class="bar-val" id="lote-progreso-txt" style="width:auto;margin-left:8px">0/0</div></div>
         <div id="lote-resultados" style="overflow-x:auto"></div>
