@@ -882,7 +882,14 @@ const Lote = {
     this.detenerPedido = false;
     document.getElementById('lote-btn').disabled = true;
     document.getElementById('lote-btn-detener').style.display = 'inline-flex';
+    document.getElementById('lote-btn-detener').disabled = false;
     document.getElementById('lote-filtro').disabled = true;
+
+    // Contador arrancando en "0/N" ya de entrada — antes se quedaba en "0/0"
+    // hasta que terminaba la primera corrida, y eso se veía igual a colgado.
+    document.getElementById('lote-progreso-fill').style.width = '0%';
+    document.getElementById('lote-progreso-txt').textContent = `0/${ids.length}`;
+    document.getElementById('lote-tiempo').textContent = 'Arrancando… cada corrida real puede tardar entre 20 segundos y 2 minutos — no cierres esta pestaña.';
 
     const resBox = document.getElementById('lote-resultados');
     resBox.innerHTML = `<table><tr><th>Proyecto</th><th>Estado</th><th>Tiempo</th></tr>
@@ -899,8 +906,12 @@ const Lote = {
       const restante = promedio ? Math.max(0, (ids.length-hechos)*promedio/paralelismo) : null;
       document.getElementById('lote-tiempo').textContent = restante!=null
         ? `${this._fmtSeg(transcurrido)} transcurridos · ~${this._fmtSeg(restante)} restante`
-        : `${this._fmtSeg(transcurrido)} transcurridos`;
+        : `${this._fmtSeg(transcurrido)} transcurridos — esperando la primera corrida…`;
     };
+    // Reloj en vivo, para que se note que sigue viva aunque ninguna corrida
+    // haya terminado todavía (antes se quedaba en el mensaje estático de
+    // "Arrancando…" durante todo el primer minuto, y se veía como colgado).
+    const tick = setInterval(actualizarTiempo, 1000);
 
     const correrUno = async (id) => {
       const p = STATE.projects.find(x=>x.id===id);
@@ -937,9 +948,11 @@ const Lote = {
       await Promise.all(tanda.map(correrUno));
     }
 
+    clearInterval(tick);
     this.corriendo = false;
     document.getElementById('lote-btn-detener').style.display = 'none';
     document.getElementById('lote-filtro').disabled = false;
+    actualizarTiempo();
     document.getElementById('lote-tiempo').textContent += this.detenerPedido ? ' · detenido a pedido' : ' · listo';
     await refreshCorrections();
     updateNavBadges();
