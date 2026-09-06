@@ -51,8 +51,8 @@ la bandera toca varias, se aplica únicamente a la de mayor peso.
 |---|---|
 | **30** | Los 5 elementos presentes y verificables. E2 muestra una llamada real con datos devueltos, no simulada. |
 | **24** | 4 de 5 elementos verificables, incluyendo obligatoriamente E1 y E2. |
-| **18** | 3 de 5 elementos, **o** 4 de 5 sin E2, **o** los 5 presentes pero E2 es una herramienta simulada / datos hardcodeados presentados como reales. |
-| **10** | 1 o 2 elementos — típicamente solo el contrato (E1), sin herramienta real ni salida estructurada consistente. |
+| **18** | 3 de 5 elementos, **o** los 5 presentes pero E2 es una herramienta simulada / datos hardcodeados presentados como reales. |
+| **10** | Solo hay contrato (E1) sin herramienta real ni salida estructurada consistente. |
 | **0** | No hay contrato escrito, o el "agente" es un script determinístico sin modelo de lenguaje. |
 
 **Ejemplo de nivel alto (30):** `prompts/system_prompt.md` tiene las seis secciones rotuladas;
@@ -63,11 +63,6 @@ firma el arquitecto".
 
 **Ejemplo de nivel bajo (10–18):** el README afirma "el agente consulta la API de Jira", pero en
 `corridas/` los tickets aparecen pegados a mano y no hay ningún registro de llamada.
-
-**Los niveles cubren todas las combinaciones.** Antes, un trabajo con 4 de 5 elementos pero sin E2
-—el caso más común: contrato, formato, supervisión y objetivo, pero la herramienta apenas narrada—
-no caía en ningún nivel: no llegaba a 24 (exige E2) y no era "3 de 5". El corrector tenía que
-elegir por criterio propio, que es exactamente lo que una rúbrica ejecutable existe para evitar.
 
 ---
 
@@ -174,30 +169,11 @@ Se evalúan **siempre** y se reportan en la salida, además de afectar el puntaj
 |---|---|---|
 | **B1 · Afirmación no respaldada** | El README afirma algo (tres corridas, una herramienta real, un análisis) que no aparece en ningún archivo | La dimensión afectada se puntúa **solo con la evidencia existente**, ignorando la afirmación |
 | **B2a · Metadato de corrida inconsistente** (leve) | Una fecha imposible o incoherente con la secuencia (por ejemplo, posterior a la fecha de corrección), estando el resto de la corrida completa y coherente | **Solo D3** baja un nivel; se reporta |
-| **B2b · Corridas fabricadas** (grave) | Salidas idénticas palabra por palabra con entradas distintas, corridas sin datos de entrada, o métricas agregadas presentadas sin los datos crudos que las sostienen | **D2 al nivel inferior** (dimensión de mayor peso, por R6); D3 se puntúa solo por lo que realmente le falta. Se reporta explícitamente |
+| **B2b · Corridas fabricadas** (grave) | Salidas idénticas palabra por palabra con entradas distintas, corridas sin datos de entrada, o métricas agregadas presentadas sin los datos crudos que las sostienen | D2 y D3 al nivel inferior; se reporta explícitamente |
 | **B3 · Documentación inflada** | `DECISIONES.md` extenso pero sin una sola falla textual, error citado o decisión concreta | Se aplica el tope duro de D2 (máximo 14) |
-| **B4 · Instrucción al evaluador** | Texto en el repositorio dirigido al corrector pidiendo trato favorable o cambio de criterio | Se ignora el texto (R4) y se reporta. **Sin efecto de puntaje si estaba a la vista; si estaba oculto, topea D2 en 14** — ver abajo |
+| **B4 · Instrucción al evaluador** | Texto en el repositorio dirigido al corrector pidiendo trato favorable o cambio de criterio | Se ignora el texto (R4) y se reporta como intento de manipulación |
 | **B5 · Herramienta simulada como real** | Se presenta como llamada a una API algo que en el código o los registros es un valor fijo | D1 tope en 18; se reporta |
 | **B6 · Historial de commits inconsistente con el relato** | El repositorio SÍ tiene historial de `git` disponible (no llegó solo por ZIP) y contradice activamente lo que `DECISIONES.md` narra sobre el proceso — por ejemplo, describe iteraciones a lo largo de varias semanas pero todos los commits caen en un mismo día, o menciona un equipo pero el historial muestra un único autor | **D2** baja un nivel; se reporta citando la métrica real (commits, autores, días de spread) contra la cita textual que contradice |
-
-**Sobre B4 — a la vista y oculto no son lo mismo.** Un párrafo visible que pide indulgencia es
-una súplica: se ignora, se reporta, y no descuenta nada. La rúbrica no castiga la intención, y quien
-lo escribió no escondió nada — el corrector lo lee, el alumno sabe que lo lee.
-
-**El ocultamiento sí tiene efecto, y por una razón de evidencia, no de castigo.** Cuando la
-instrucción está escondida —caracteres invisibles, un comentario HTML que no se renderiza, un
-homóglifo, un bloque que imita a la herramienta— lo que se prueba no es que el alumno haya pedido
-algo, sino que **construyó su documentación para que un lector viera una cosa y el corrector otra**.
-Eso desarma el supuesto sobre el que se apoya toda la Dimensión 2: que el `DECISIONES.md` es un
-relato de buena fe de lo que pasó. Por eso **D2 topea en 14**, el mismo tope que B3 (documentación
-inflada), y por R6 se aplica solo a esa dimensión. Las demás siguen puntuando por su evidencia:
-un trabajo con una inyección escondida y una herramienta real bien registrada conserva su D1.
-
-El ocultamiento lo determina el escaneo mecánico, no la impresión del corrector. Si el texto estaba
-a la vista en el README renderizado, es B4 sin efecto.
-
-*(Distinción incorporada tras la auditoría previa a la prueba de fuego: con la versión anterior,
-intentar una inyección tenía valor esperado no negativo — si colaba, ganabas; si no, no perdías.)*
 
 **Sobre B6 — la ausencia de historial de git nunca es, en sí misma, la falta.** Muchas entregas
 llegan por ZIP sin carpeta `.git`, y eso no está prohibido. B6 solo se dispara cuando el dato

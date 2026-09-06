@@ -2,9 +2,7 @@
 
 Qué celda de `rubrica.md` tiene un caso que la ejercite y cuál no. La rúbrica define **25 niveles
 discretos** (5 dimensiones × 5 niveles) y **7 filas de bandera** (B1, B2a, B2b, B3, B4, B5, B6 —
-el system prompt las cuenta como "seis" porque agrupa B2a/B2b, pero son siete filas). Contadas por
-condición de detección son **ocho**, porque B4 se bifurca: a la vista no descuenta nada, oculta
-topea D2 en 14, y son dos verificaciones distintas con dos efectos distintos.
+el system prompt las cuenta como "seis" porque agrupa B2a/B2b, pero son siete filas). 
 
 Este documento existe para decir dónde el corrector está calibrado y dónde no. **No mide qué tan
 bueno es el corrector: mide contra cuántas situaciones distintas lo probamos.** Son dos cosas
