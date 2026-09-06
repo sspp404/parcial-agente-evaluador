@@ -172,7 +172,14 @@ def leer_historial_git(root: Path) -> dict | None:
 
     try:
         proc = subprocess.run(
-            ["git", "-C", str(root), "log", "--pretty=format:%aI|%an"],
+            # Se leen las CUATRO: fecha y nombre de autor (%aI, %an) y de committer
+            # (%cI, %cn). Las de autor las fija quien commitea con dos variables de
+            # entorno, así que un historial "largo y grupal" se fabrica en un
+            # minuto. Las de committer se pueden forzar igual, pero casi nadie lo
+            # hace: un historial inventado en una sola sesión deja las fechas de
+            # autor repartidas en semanas y las de committer todas juntas. Esa
+            # divergencia es la señal, y no la teníamos.
+            ["git", "-C", str(root), "log", "--pretty=format:%aI|%cI|%an|%cn"],
             capture_output=True, text=True, timeout=15,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
@@ -180,31 +187,49 @@ def leer_historial_git(root: Path) -> dict | None:
     if proc.returncode != 0 or not proc.stdout.strip():
         return None
 
-    fechas, autores = [], set()
+    fechas, fechas_commit, autores, committers = [], [], set(), set()
     for linea in proc.stdout.strip().split("\n"):
-        partes = linea.split("|", 1)
-        if len(partes) < 2 or not partes[0]:
+        partes = linea.split("|", 3)
+        if len(partes) < 4 or not partes[0]:
             continue
         fechas.append(partes[0])
-        autores.add(partes[1])
+        fechas_commit.append(partes[1])
+        autores.add(partes[2])
+        committers.add(partes[3])
     if not fechas:
         return None
 
+    def _spread(iso_list):
+        if not iso_list:
+            return None
+        orden = sorted(iso_list)
+        try:
+            return (datetime.fromisoformat(orden[-1]) - datetime.fromisoformat(orden[0])).days
+        except ValueError:
+            return None
+
     fechas.sort()
-    dias = None
-    try:
-        d1 = datetime.fromisoformat(fechas[0])
-        d2 = datetime.fromisoformat(fechas[-1])
-        dias = (d2 - d1).days
-    except ValueError:
-        pass
+    dias = _spread(fechas)
+    dias_commit = _spread(fechas_commit)
+
+    # Un historial genuino tiene los dos spreads parecidos: se fue commiteando a
+    # medida que se trabajaba. Fechas de autor repartidas en semanas con fechas de
+    # committer todas en el mismo día significa que el historial se escribió de una
+    # sentada hacia atrás.
+    retroactivo = (
+        dias is not None and dias_commit is not None
+        and dias >= 3 and dias_commit == 0
+    )
 
     return {
         "commits": len(fechas),
         "autores": sorted(autores),
+        "committers": sorted(committers),
         "primerCommit": fechas[0],
         "ultimoCommit": fechas[-1],
         "diasDeSpread": dias,
+        "diasDeSpreadCommitter": dias_commit,
+        "fechasRetroactivas": retroactivo,
     }
 
 
@@ -239,11 +264,23 @@ def construir_bloque_prompt(alertas_seguridad: list[dict], git_log: dict | None)
             f"\n=== Historial real de git (métricas, no el log completo) ===\n"
             f"Commits: {g['commits']} · Autor(es): {', '.join(g['autores'])} · "
             f"Primer commit: {g['primerCommit']} · Último commit: {g['ultimoCommit']} · "
-            f"Días entre el primero y el último: {g['diasDeSpread']}.\n"
+            f"Días entre el primero y el último (fechas de autor): {g['diasDeSpread']}.\n"
+            f"Committer(s): {', '.join(g.get('committers') or [])} · "
+            f"Días de spread según fechas de committer: {g.get('diasDeSpreadCommitter')}.\n"
             f"Contrastá esto contra lo que DECISIONES.md narra sobre el proceso: si el relato describe "
             f"iteraciones a lo largo del tiempo pero el historial real es de muy pocos días o un solo "
             f"autor pese a mencionar un equipo, reportalo como bandera B6.\n"
         )
+        if g.get("fechasRetroactivas"):
+            bloque += (
+                "ATENCIÓN: las fechas de AUTOR de este repositorio están repartidas en varios días, "
+                "pero las de COMMITTER caen todas el mismo día. Un proceso real deja los dos spreads "
+                "parecidos, porque se commitea a medida que se trabaja. Esta divergencia es el patrón "
+                "de un historial escrito de una sentada con fechas hacia atrás. No alcanza por sí sola "
+                "para afirmar la intención, pero sí para que NO tomes el spread de autor como prueba "
+                "de un proceso extendido: si DECISIONES.md se apoya en ese relato, reportá B6 citando "
+                "los dos spreads.\n"
+            )
     else:
         bloque += (
             "\n=== Historial de git ===\nNo hay historial de git disponible en esta carpeta (llegó "

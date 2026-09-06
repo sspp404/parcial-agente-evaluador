@@ -176,17 +176,24 @@ def construir_dump(ruta: str, base: Path) -> dict:
             size = p.stat().st_size
         except OSError:
             continue
-        if size > MAX_POR_ARCHIVO:
-            omitidos.append(f"{rel} ({round(size / 1000)} KB, muy grande)")
-            continue
         try:
             content = p.read_text(encoding="utf-8-sig", errors="replace")
         except OSError:
             continue
+
+        # El escaneo forense corre SIEMPRE, incluso sobre lo que no se manda por
+        # tamaño. Antes el `break` del corte salteaba el resto de los archivos:
+        # bastaba con poner un README enorme adelante para que la inyección
+        # escondida en el último archivo no se escaneara nunca.
         alertas_seguridad.extend(forense.escanear_texto(content, rel))
+
+        if size > MAX_POR_ARCHIVO:
+            omitidos.append(f"{rel} ({round(size / 1000)} KB, supera el máximo por archivo — escaneado pero no enviado)")
+            continue
         if total + len(content) > MAX_DUMP_TOTAL:
             cortado = True
-            break
+            omitidos.append(f"{rel} (no entró: se alcanzó el límite total del envío — escaneado pero no enviado)")
+            continue
         partes.append(f"<<<ARCHIVO {rel} {marca}>>>\n{content}\n<<<FIN {rel} {marca}>>>")
         total += len(content)
         count += 1
@@ -243,6 +250,23 @@ def listar_subcarpetas(ruta: str | None, base: Path) -> dict:
     }
 
 
+def _nota_de_omitidos(dump: dict) -> str:
+    """Los archivos que el contrato pedía leer y no se enviaron (por tamaño o por
+    el tope total) tienen que estar declarados: si no, el corrector puntúa una
+    ausencia que en realidad es un recorte nuestro, y no puede distinguir un
+    trabajo que no entregó algo de uno cuyo archivo no le llegó."""
+    om = dump.get("omitidos") or []
+    if not om:
+        return ""
+    items = "\n".join(f"  - {o}" for o in om)
+    return (
+        f".\n\nARCHIVOS NO ENVIADOS (existen en el repositorio; el recorte es de la herramienta, "
+        f"no una falta del trabajo):\n{items}\n"
+        f"Todos fueron escaneados por seguridad. Si alguno era necesario para decidir un elemento, "
+        f"decilo explícitamente en la justificación en vez de puntuarlo como ausente"
+    )
+
+
 def _nota_de_raiz(dump: dict) -> str:
     """Si la entrega no estaba en la raíz del repositorio, el corrector tiene
     que saberlo: es evidencia de D3 (formato), no un detalle de plomería."""
@@ -288,6 +312,7 @@ def construir_prompts(proyecto_nombre: str, fecha: str, rubrica_texto: str, dump
         f"tu contrato pide leer. Del resto tenés el nombre y la ruta, no el contenido — si para "
         f"decidir un elemento necesitás un archivo cuyo contenido no recibiste, no supongas qué "
         f"dice: aplicá R3 y decilo en la justificación"
+        f"{_nota_de_omitidos(dump)}"
         f"{' (se recortó por tamaño, puede faltar contenido)' if dump['cortado'] else ''}:\n\n"
         f"{dump['text']}\n\n"
         f"=== Tarea ===\n"

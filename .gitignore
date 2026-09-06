@@ -1,6 +1,11 @@
 # panel-evaluador/ SÍ se sube (es la herramienta operativa opcional, no la
 # entrega formal del parcial) — pero nunca sus datos locales ni secretos.
 panel-evaluador/data/
-panel-evaluador/casos-extra/
+# casos-extra/ ya NO se ignora: se movió a la raíz del repo y se versiona.
+# Los casos que calibran B4 (ocultamiento) y B6 (historial) estaban fuera del
+# repositorio, así que sus filas en calibracion.md no se podían verificar
+# abriendo un archivo — la bandera B1 que este mismo agente le aplica a los
+# demás. El caso de B6 ya no trae un `.git` anidado: trae el script que lo
+# genera.
 panel-evaluador/server/__pycache__/
 panel-evaluador/**/__pycache__/
