@@ -357,20 +357,32 @@ const Proyectos = {
     let r;
     try{ r = await Api.get('/api/fs/browse' + (ruta!=null ? '?ruta='+encodeURIComponent(ruta) : '')); }
     catch(e){ box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+    // Las rutas van en data-* y se leen por delegación, NUNCA interpoladas dentro
+    // de un onclick: JSON.stringify no escapa comillas simples ni &, y el parser
+    // de HTML decodifica las entidades ANTES de compilar el handler — o sea que
+    // una carpeta llamada  a&quot;);codigo();//  ejecutaba código, y una llamada
+    // "Juan's repo" directamente rompía la fila. El explorador arranca en la
+    // carpeta donde se clonan los repos ajenos, así que el nombre no es confiable.
     const filas = r.carpetas.map(c=>
-      `<div class="rowbtn" style="padding:7px 10px;border-radius:7px;cursor:pointer" onclick='Proyectos.navegarExplorador(${JSON.stringify(c.path)})' onmouseover="this.style.background='var(--bg-sunken)'" onmouseout="this.style.background=''">📁 ${esc(c.nombre)}</div>`
+      `<div class="rowbtn js-nav" data-path="${esc(c.path)}" style="padding:7px 10px;border-radius:7px;cursor:pointer" onmouseover="this.style.background='var(--bg-sunken)'" onmouseout="this.style.background=''">📁 ${esc(c.nombre)}</div>`
     ).join('') || '<div class="hint" style="padding:8px">No hay subcarpetas acá.</div>';
     box.innerHTML = `
       <div class="card" style="background:var(--bg-sunken);margin:4px 0 14px">
         <div class="row" style="justify-content:space-between;margin-bottom:8px">
           <code class="hint" style="word-break:break-all">${esc(r.path)}</code>
-          <button class="btn sec sm" type="button" ${r.parent?`onclick='Proyectos.navegarExplorador(${JSON.stringify(r.parent)})'`:'disabled'}>⬆ Subir</button>
+          <button class="btn sec sm js-nav" type="button" ${r.parent?`data-path="${esc(r.parent)}"`:'disabled'}>⬆ Subir</button>
         </div>
         <div style="max-height:180px;overflow:auto">${filas}</div>
         <div class="row" style="margin-top:10px;justify-content:flex-end">
-          <button class="btn sm" type="button" onclick='Proyectos.elegirCarpetaActual(${JSON.stringify(r.path)})'>Usar esta carpeta</button>
+          <button class="btn sm js-usar" type="button" data-path="${esc(r.path)}">Usar esta carpeta</button>
         </div>
       </div>`;
+    box.onclick = (ev)=>{
+      const nav = ev.target.closest('.js-nav[data-path]');
+      if(nav){ Proyectos.navegarExplorador(nav.dataset.path); return; }
+      const usar = ev.target.closest('.js-usar[data-path]');
+      if(usar) Proyectos.elegirCarpetaActual(usar.dataset.path);
+    };
   },
   elegirCarpetaActual(path){
     document.getElementById('pm-ruta').value = path;
@@ -416,12 +428,22 @@ const Proyectos = {
         <td>${n===1? '1 corrección' : n+' correcciones'}</td>
         <td>${p.creado||'—'}</td>
         <td>
-          <button class="btn sec sm" onclick='Proyectos.abrirModal(${JSON.stringify(p).replace(/'/g,"&#39;")})'>Editar</button>
-          <button class="btn danger sm" onclick="Proyectos.borrar('${p.id}')">Borrar</button>
+          <button class="btn sec sm js-editar" type="button" data-id="${esc(p.id)}">Editar</button>
+          <button class="btn danger sm js-borrar" type="button" data-id="${esc(p.id)}">Borrar</button>
         </td>
       </tr>`;
     }).join('');
     box.innerHTML = `<table><tr><th>Proyecto</th><th>Origen</th><th>URL</th><th>Correcciones</th><th>Creado</th><th></th></tr>${rows}</table>`;
+    // Mismo motivo que el explorador: serializar el proyecto entero dentro de un
+    // onclick lo rompía con solo tener un &quot; en el nombre (el parser decodifica
+    // la entidad antes de compilar el handler). Acá va el id y el objeto se busca
+    // en memoria.
+    box.onclick = (ev)=>{
+      const ed = ev.target.closest('.js-editar[data-id]');
+      if(ed){ const p = STATE.projects.find(x=>x.id===ed.dataset.id); if(p) Proyectos.abrirModal(p); return; }
+      const bo = ev.target.closest('.js-borrar[data-id]');
+      if(bo) Proyectos.borrar(bo.dataset.id);
+    };
   },
 };
 function UI_closeModal(){ document.getElementById('modal-root').innerHTML=''; }
@@ -498,6 +520,7 @@ Devolvé la corrección completa en el formato fijo que define tu system prompt,
     document.getElementById('nc-guardar').disabled = true;
     document.getElementById('nc-guardar-hint').textContent = '';
     document.getElementById('nc-forense').innerHTML = '';
+    this._salidaProyectoId = null;
     this.mostrarModoSalida('editar');
     this.renderManual();
     this.renderAuto();
@@ -517,7 +540,11 @@ Devolvé la corrección completa en el formato fijo que define tu system prompt,
     if(v.existe && v.esCarpeta && v.archivos>0){
       info.innerHTML = `<span class="tag t-ok">✓ ${v.archivos} archivo(s) legibles</span> <span class="hint">${esc(v.root)}</span>`;
       cloneRow.innerHTML = '';
-      btn.disabled = false; hint.textContent = 'Todo listo. Puede tardar unos segundos.';
+      // renderAuto() se dispara al cambiar la fecha y al volver a esta vista.
+      // Sin mirar `corriendo`, cualquiera de las dos re-habilitaba el botón en
+      // medio de una corrida y permitía lanzar una segunda en paralelo.
+      btn.disabled = !!this.corriendo;
+      hint.textContent = this.corriendo ? 'Hay una corrección en curso…' : 'Todo listo. Puede tardar unos segundos.';
     } else if(p.origen==='url' && p.url){
       info.innerHTML = `<span class="tag t-warn">la carpeta todavía no existe</span> <span class="hint">${esc(p.ruta)}</span>`;
       cloneRow.innerHTML = `<button class="btn sec sm" onclick="Nueva.clonar()">Clonar repositorio ahora (git)</button>`;
@@ -541,8 +568,18 @@ Devolvé la corrección completa en el formato fijo que define tu system prompt,
   async correrAutomatico(){
     const p = this.proyectoActual();
     if(!p){ UI.toast('Elegí un proyecto.', 'bad'); return; }
+    if(this.corriendo){ UI.toast('Ya hay una corrección en curso.', 'warn'); return; }
     const fecha = document.getElementById('nc-fecha').value || new Date().toISOString().slice(0,10);
     const btn = document.getElementById('btn-auto');
+    // Identidad de esta corrida. Sin esto, una respuesta que llegaba después de
+    // que el usuario cambiara de proyecto escribía su resultado sobre el
+    // proyecto nuevo — y Guardar lo posteaba con el id equivocado: la
+    // corrección de un repo archivada con el nombre de otro.
+    const pid = p.id;
+    const miCorrida = (this._corridaId = (this._corridaId || 0) + 1);
+    this.corriendo = true;
+    document.getElementById('nc-proyecto').disabled = true;
+    document.getElementById('nc-fecha').disabled = true;
     UI.setLoading(btn, true);
     const detenerProgreso = UI.mostrarProgreso('auto-hint', [
       'Leyendo la rúbrica y el repositorio…',
@@ -551,7 +588,12 @@ Devolvé la corrección completa en el formato fijo que define tu system prompt,
       'Esto puede tardar hasta medio minuto en repos grandes…',
     ]);
     try{
-      const res = await Api.post('/api/run/auto', {projectId:p.id, fecha});
+      const res = await Api.post('/api/run/auto', {projectId:pid, fecha});
+      if(miCorrida !== this._corridaId || (this.proyectoActual()||{}).id !== pid){
+        UI.toast('Llegó el resultado de una corrida anterior, de otro proyecto. Se descartó.', 'warn', 7000);
+        return;
+      }
+      this._salidaProyectoId = pid;
       document.getElementById('nc-salida').value = res.salida;
       this.mostrarValidacion(res.validacion);
       this.mostrarForense(res.dump);
@@ -566,9 +608,16 @@ Devolvé la corrección completa en el formato fijo que define tu system prompt,
       }
     }catch(e){
       UI.toast(e.message, 'bad', 8000);
+    }finally{
+      detenerProgreso();
+      if(miCorrida === this._corridaId){
+        this.corriendo = false;
+        document.getElementById('nc-proyecto').disabled = false;
+        document.getElementById('nc-fecha').disabled = false;
+        UI.setLoading(btn, false, 'Correr corrección automáticamente');
+        this.renderAuto();
+      }
     }
-    detenerProgreso();
-    UI.setLoading(btn, false, 'Correr corrección automáticamente');
   },
   onSalidaInput(){
     clearTimeout(this._debounce);
@@ -613,6 +662,10 @@ Devolvé la corrección completa en el formato fijo que define tu system prompt,
     if(!p){ UI.toast('Elegí un proyecto.', 'bad'); return; }
     const raw = document.getElementById('nc-salida').value;
     if(!raw.trim()){ UI.toast('Pegá y validá la corrección primero.', 'bad'); return; }
+    if(this._salidaProyectoId && this._salidaProyectoId !== p.id){
+      UI.toast('Esta corrección se generó para otro proyecto. Volvé a correrla antes de guardar.', 'bad', 8000);
+      return;
+    }
     try{
       await Api.post('/api/corrections', {projectId:p.id, fecha:document.getElementById('nc-fecha').value, raw});
       await Promise.all([refreshCorrections()]);
@@ -646,9 +699,9 @@ const Resultados = {
       const vtag = c.veredicto==='bad'?'<span class="tag t-bad">no válida</span>':c.veredicto==='warn'?'<span class="tag t-warn">con avisos</span>':'<span class="tag t-ok">válida</span>';
       return `<tr class="rowbtn" onclick="Resultados.verDetalle('${c.id}')">
         <td><b>${esc(p?p.nombre:'—')}</b></td>
-        <td>${c.fecha||'—'}</td>
-        <td><span class="tag t-${r.tipo}">${c.total!=null? c.total+'/100':'—'}</span></td>
-        <td>${(c.banderas||[]).map(b=>`<span class="pill">${b}</span>`).join('')||'<span class="hint">ninguna</span>'}</td>
+        <td>${esc(c.fecha||'—')}</td>
+        <td><span class="tag t-${r.tipo}">${c.total!=null? esc(c.total)+'/100':'—'}</span></td>
+        <td>${(c.banderas||[]).map(b=>`<span class="pill">${esc(b)}</span>`).join('')||'<span class="hint">ninguna</span>'}</td>
         <td>${vtag}</td>
         <td><button class="btn danger sm" onclick="event.stopPropagation();Resultados.borrar('${c.id}')">Borrar</button></td>
       </tr>`;
@@ -703,7 +756,7 @@ const Comparar = {
     box.innerHTML = list.map(c=>{
       const p = STATE.projects.find(x=>x.id===c.projectId);
       return `<label class="checkline" style="margin-bottom:8px"><input type="checkbox" value="${c.id}" onchange="Comparar.actualizar()">
-        <b>${esc(p?p.nombre:'—')}</b> <span class="hint">${c.fecha||''} · ${c.total!=null?c.total+'/100':'sin total'}</span></label>`;
+        <b>${esc(p?p.nombre:'—')}</b> <span class="hint">${esc(c.fecha||'')} · ${c.total!=null?esc(c.total)+'/100':'sin total'}</span></label>`;
     }).join('');
     document.getElementById('comparar-resultado').innerHTML = '<div class="card"><div class="empty">Elegí dos o más correcciones a la izquierda.</div></div>';
   },
@@ -716,7 +769,7 @@ const Comparar = {
       const p = STATE.projects.find(x=>x.id===c.projectId);
       return {c,p};
     });
-    let head = '<tr><th>Dimensión</th>' + items.map(i=>`<th>${esc(i.p?i.p.nombre:'—')}<div class="hint">${i.c.fecha||''}</div></th>`).join('') + '</tr>';
+    let head = '<tr><th>Dimensión</th>' + items.map(i=>`<th>${esc(i.p?i.p.nombre:'—')}<div class="hint">${esc(i.c.fecha||'')}</div></th>`).join('') + '</tr>';
     let rows = '';
     for(let d=1; d<=5; d++){
       rows += `<tr><td>${DIM_LABEL[d]}</td>` + items.map(i=>{
@@ -726,8 +779,8 @@ const Comparar = {
         return `<td><div class="bar-row" style="margin-bottom:0"><div class="bar-track" style="max-width:90px"><div class="bar-fill" style="width:${pct}%;background:${DIM_COLOR[d]}"></div></div><div class="bar-val" style="width:auto">${dim.score}/${dim.max}</div></div></td>`;
       }).join('') + '</tr>';
     }
-    rows += `<tr><td><b>Total</b></td>` + items.map(i=>`<td><b>${i.c.total!=null?i.c.total+'/100':'—'}</b></td>`).join('') + '</tr>';
-    rows += `<tr><td>Banderas</td>` + items.map(i=>`<td>${(i.c.banderas||[]).map(b=>`<span class="pill">${b}</span>`).join('')||'<span class="hint">ninguna</span>'}</td>`).join('') + '</tr>';
+    rows += `<tr><td><b>Total</b></td>` + items.map(i=>`<td><b>${i.c.total!=null?esc(i.c.total)+'/100':'—'}</b></td>`).join('') + '</tr>';
+    rows += `<tr><td>Banderas</td>` + items.map(i=>`<td>${(i.c.banderas||[]).map(b=>`<span class="pill">${esc(b)}</span>`).join('')||'<span class="hint">ninguna</span>'}</td>`).join('') + '</tr>';
     box.innerHTML = `<div class="card"><h2>Comparación</h2><div style="overflow-x:auto;margin-top:10px"><table>${head}${rows}</table></div></div>`;
   },
 };
@@ -847,6 +900,12 @@ const Lote = {
       document.getElementById('lote-btn').disabled = true;
       return;
     }
+    // Podar la selección contra los proyectos que todavía existen: borrar un
+    // proyecto seleccionado dejaba su id fantasma en el Set, el contador seguía
+    // contándolo y al correr el lote reventaba con un TypeError antes de la
+    // primera corrida, dejando el botón deshabilitado para siempre.
+    const vivos = new Set(STATE.projects.map(p=>p.id));
+    [...this.seleccionados].forEach(id => { if(!vivos.has(id)) this.seleccionados.delete(id); });
     const filtro = (document.getElementById('lote-filtro').value || '').toLowerCase();
     const visibles = STATE.projects.filter(p => p.nombre.toLowerCase().includes(filtro));
     box.innerHTML = visibles.map(p =>
@@ -933,7 +992,7 @@ const Lote = {
     resBox.innerHTML = `<table><tr><th>Proyecto</th><th>Estado</th><th>Tiempo</th><th></th></tr>
       ${ids.map(id=>{
         const p = STATE.projects.find(x=>x.id===id);
-        return `<tr id="lote-row-${id}"><td>${esc(p.nombre)}</td><td><span class="tag t-muted">pendiente</span></td><td class="hint">—</td><td></td></tr>`;
+        return `<tr id="lote-row-${id}"><td>${esc(p ? p.nombre : '(proyecto borrado)')}</td><td><span class="tag t-muted">pendiente</span></td><td class="hint">—</td><td></td></tr>`;
       }).join('')}</table>`;
 
     let hechos = 0, errores = 0;
