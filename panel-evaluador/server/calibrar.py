@@ -10,6 +10,7 @@ Uso:
 
 Requiere DOPPLER_TOKEN configurado (igual que la app).
 """
+import os
 import statistics
 import sys
 import time
@@ -80,7 +81,7 @@ def main():
     etiqueta = datetime.now().strftime("%Y%m%d-%H%M")
     salida_dir = CORRECCIONES_DIR / f"corrida_{etiqueta}"
     salida_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Salidas crudas -> {salida_dir.relative_to(CORRECTOR_DIR)}/\n")
+    print(f"Salidas crudas -> {os.path.relpath(salida_dir, CORRECTOR_DIR)}/\n")
     casos_a_correr = [c for c in CASOS if not FILTRO or any(f in c["nombre"] for f in FILTRO)]
     for caso in casos_a_correr:
         print(f"=== {caso['nombre']} ({REPETICIONES} corridas, fecha {caso['fecha']}) ===")
@@ -101,7 +102,13 @@ def main():
             try:
                 r = anthropic_client.call(creds["apiKey"], creds["model"], cf["systemPrompt"], user_text, cached_prefix=cached_prefix)
             except anthropic_client.AnthropicError as e:
-                print(f"  corrida {i+1}: ERROR DE API — {e}")
+                # Antes esto solo imprimía y seguía. Si TODAS las corridas de un
+                # caso morían por un 429, el chequeo de banderas —que vive dentro
+                # de `if notas:`— no corría, y el script terminaba con
+                # "✓ Calibración OK" y código 0. Una calibración que no midió
+                # nada no puede reportarse como una que pasó.
+                print(f"  corrida {i+1}: ✗ ERROR DE API — {e}")
+                fallas.append(f"{caso['nombre']}: corrida {i+1} falló por error de API ({e})")
                 continue
             dt = time.time() - t0
             v = validador.validar(r["text"])
@@ -147,6 +154,11 @@ def main():
             )
             guardadas.append(destino)
 
+        if notas and len(notas) < REPETICIONES:
+            fallas.append(
+                f"{caso['nombre']}: solo {len(notas)} de {REPETICIONES} corridas dieron un total "
+                f"válido — el spread reportado no es comparable con el de los otros casos"
+            )
         if notas:
             spread = max(notas) - min(notas)
             print(
@@ -165,7 +177,8 @@ def main():
                 print(f"  ✗ FALLA · se esperaban {caso['banderas_esperadas']} y faltaron: {', '.join(faltantes)}")
         else:
             spread = None
-            print("  -> ninguna corrida devolvió un total válido")
+            print("  -> ✗ ninguna corrida devolvió un total válido")
+            fallas.append(f"{caso['nombre']}: ninguna de las {REPETICIONES} corridas devolvió un total válido")
         print()
         resumen.append({
             "caso": caso["nombre"], "notas": notas, "spread": spread,
@@ -181,14 +194,17 @@ def main():
         print(f"{r['caso']}: notas={r['notas']} spread={r['spread']} banderas={r['banderas']}"
               f" truncadas={r['truncadas']} invalidas={r['invalidas']}{alerta}")
 
-    print(f"\n{len(guardadas)} salida(s) cruda(s) guardada(s) en {salida_dir.relative_to(CORRECTOR_DIR)}/")
+    print(f"\n{len(guardadas)} salida(s) cruda(s) guardada(s) en {os.path.relpath(salida_dir, CORRECTOR_DIR)}/")
 
     if fallas:
         print("\n✗ La calibración NO pasó:")
         for f in fallas:
             print(f"   - {f}")
         return 1
-    print("\n✓ Calibración OK: todas las banderas esperadas aparecieron en todos los casos.")
+    if not guardadas:
+        print("\n✗ No se guardó ninguna salida cruda: no hay evidencia de que esta calibración haya corrido.")
+        return 1
+    print(f"\n✓ Calibración OK: {len(guardadas)} corridas guardadas y todas las banderas esperadas aparecieron.")
     return 0
 
 

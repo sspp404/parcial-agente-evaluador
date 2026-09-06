@@ -44,7 +44,7 @@ nunca es, en sí misma, la falta"*).
 **Por qué no 30:** el nivel 30 exige *"los 5 elementos presentes y verificables"*. E4 no está: no
 hay un solo renglón que diga qué hace el agente solo, qué revisa una persona ni quién firma.
 
-**Por qué no 18:** el nivel 18 cubre *"3 de 5 elementos, o 4 de 5 sin E2, o los 5 presentes pero E2
+**Por qué no 18:** el nivel 18 cubre *"3 de 5 elementos, o los 5 presentes pero E2
 es una herramienta simulada"*. Acá hay 4 de 5 **con** E2, y E2 pasa el paso 2 del protocolo de
 evidencia del system prompt (*"una respuesta que un sistema externo generó… JSON o payload crudo,
 timestamps de sistema con milisegundos, IDs de recursos, códigos de estado"*): el envelope de las

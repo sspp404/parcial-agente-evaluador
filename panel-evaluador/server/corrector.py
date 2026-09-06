@@ -20,6 +20,7 @@ class RutaInvalida(RuntimeError):
 EXT_LEGIBLES = {".md", ".mdx", ".txt", ".json", ".yml", ".yaml", ".py", ".js", ".ts", ".csv", ".mjs", ".cjs"}
 EXCLUDE_DIRS = {".git", "node_modules", "__pycache__", "panel-evaluador", "data", ".venv", "venv"}
 MAX_POR_ARCHIVO = 150_000   # caracteres
+MAX_ESCANEO_FORENSE = 2_000_000  # bytes: tope solo para no leer un binario enorme
 MAX_DUMP_TOTAL = 400_000    # caracteres
 
 # El contrato del corrector (agente/system_prompt.md) es explícito: solo tiene
@@ -29,6 +30,15 @@ MAX_DUMP_TOTAL = 400_000    # caracteres
 # (más abajo) sigue mostrando el repositorio completo.
 ARCHIVOS_RAIZ_REQUERIDOS = {"readme.md", "decisiones.md"}
 CARPETAS_REQUERIDAS = {"prompts", "corridas"}
+
+# Carpetas que contienen trabajos de EJEMPLO, no la entrega. Un repositorio que
+# incluye casos de prueba tiene ahí adentro estructuras obligatorias completas;
+# sin esta lista, el detector de raíz elige una de ellas y el corrector termina
+# puntuando el caso de prueba en vez del trabajo.
+CONTENEDORES_DE_EJEMPLO = {
+    "casos", "casos-extra", "ejemplos", "examples", "samples",
+    "tests", "test", "fixtures", "correcciones", "templates", "plantillas",
+}
 
 
 def _marcadores_en(prefijo: str, rutas: list[str]) -> set:
@@ -59,20 +69,41 @@ def detectar_raiz_entrega(rutas: list[str]) -> str:
     elementos obligatorios colgando. La raíz gana los empates —si el repo está
     bien armado, nada cambia— y solo bajamos si abajo hay estrictamente más.
     Devuelve "" para la raíz."""
-    prefijos = {""}
+    marcadores_raiz = _marcadores_en("", rutas)
+    # Si la raíz ya tiene casi toda la estructura, ES la entrega. Bajar desde
+    # acá era el bug: cualquier repo que incluya casos de ejemplo (como el de
+    # este mismo parcial) tiene subcarpetas con los cuatro elementos completos,
+    # y el detector elegía una de ellas — corregía el caso de prueba en vez del
+    # trabajo, sin que nadie se enterara.
+    if len(marcadores_raiz) >= 3:
+        return ""
+
+    candidatos = []
     for rel in rutas:
         partes = rel.split("/")[:-1]
         for i in range(1, min(len(partes), 3) + 1):
-            prefijos.add("/".join(partes[:i]))
+            pref = "/".join(partes[:i])
+            if pref not in candidatos:
+                candidatos.append(pref)
 
-    mejor, mejor_score = "", len(_marcadores_en("", rutas))
-    for pref in sorted(prefijos, key=lambda p: (p.count("/"), p)):
-        if not pref:
-            continue
-        score = len(_marcadores_en(pref, rutas))
-        if score > mejor_score:
-            mejor, mejor_score = pref, score
-    return mejor
+    # Una carpeta de ejemplos nunca es la entrega, por más completa que esté.
+    candidatos = [
+        c for c in candidatos
+        if c.split("/")[0].lower() not in CONTENEDORES_DE_EJEMPLO
+    ]
+
+    # Y para bajar de la raíz exigimos la estructura COMPLETA: los cuatro
+    # elementos. Con menos que eso preferimos quedarnos arriba y que el
+    # corrector puntúe D3 por lo que realmente falta.
+    completos = sorted(
+        (c for c in candidatos if len(_marcadores_en(c, rutas)) == 4),
+        key=lambda p: (p.count("/"), p),
+    )
+    if len(completos) == 1:
+        return completos[0]
+    # Ninguno completo, o varios candidatos igual de buenos: ambigüedad. Nos
+    # quedamos en la raíz en vez de adivinar.
+    return ""
 
 
 def _es_contenido_requerido(rel_posix: str, raiz: str = "") -> bool:
@@ -142,6 +173,18 @@ def construir_dump(ruta: str, base: Path) -> dict:
     todos = [p.relative_to(root).as_posix() for p in _iter_todos_los_archivos(root)]
     listado = "\n".join(todos)
 
+    # El listado se rotula "completo", y no lo era: EXCLUDE_DIRS y los
+    # directorios ocultos se filtran en silencio. Si el repositorio evaluado
+    # tiene carpetas ahí, el corrector puntúa D3 sobre una foto incompleta sin
+    # saberlo. Contamos qué se ocultó para poder declararlo.
+    ocultas = set()
+    for dirpath, dirnames, _fns in os.walk(root):
+        for d in dirnames:
+            if d in EXCLUDE_DIRS or d.startswith("."):
+                rel_d = (Path(dirpath) / d).relative_to(root).as_posix()
+                if not any(rel_d.startswith(o + "/") for o in ocultas):
+                    ocultas.add(rel_d)
+
     raiz_entrega = detectar_raiz_entrega(todos)
 
     # Delimitador único e impredecible por corrida. Con ``` fijo, un archivo del
@@ -151,12 +194,28 @@ def construir_dump(ruta: str, base: Path) -> dict:
     # simular que su contenido terminó.
     marca = secrets.token_hex(6)
 
+    # El escaneo forense corre en su propia pasada, sobre TODOS los archivos de
+    # texto del repositorio, ANTES de decidir qué se envía. Antes vivía dentro
+    # del bucle de armado y quedaba detrás de dos `continue`: una inyección
+    # escondida en un archivo que no se enviaba (por estar fuera de la raíz
+    # detectada, o por tener una extensión no legible) no se escaneaba nunca.
+    # Es un regex local: no cuesta tokens, así que no hay motivo para acotarlo.
+    alertas_seguridad = []
+    for rel in todos:
+        p_esc = root / rel
+        try:
+            if p_esc.stat().st_size > MAX_ESCANEO_FORENSE:
+                continue
+            texto_esc = p_esc.read_text(encoding="utf-8-sig", errors="strict")
+        except (OSError, UnicodeDecodeError):
+            continue  # binario o ilegible: no hay texto que esconder
+        alertas_seguridad.extend(forense.escanear_texto(texto_esc, rel))
+
     partes = []
     total = 0
     count = 0
     omitidos = []
     cortado = False
-    alertas_seguridad = []
     for rel in todos:
         if not _es_contenido_requerido(rel, raiz_entrega):
             # Si un archivo se LLAMA como uno obligatorio pero está fuera de la
@@ -181,12 +240,6 @@ def construir_dump(ruta: str, base: Path) -> dict:
         except OSError:
             continue
 
-        # El escaneo forense corre SIEMPRE, incluso sobre lo que no se manda por
-        # tamaño. Antes el `break` del corte salteaba el resto de los archivos:
-        # bastaba con poner un README enorme adelante para que la inyección
-        # escondida en el último archivo no se escaneara nunca.
-        alertas_seguridad.extend(forense.escanear_texto(content, rel))
-
         if size > MAX_POR_ARCHIVO:
             omitidos.append(f"{rel} ({round(size / 1000)} KB, supera el máximo por archivo — escaneado pero no enviado)")
             continue
@@ -208,6 +261,7 @@ def construir_dump(ruta: str, base: Path) -> dict:
         "omitidos": omitidos,
         "root": str(root),
         "raizEntrega": raiz_entrega,
+        "carpetasOcultas": sorted(ocultas),
         "marca": marca,
         "alertasSeguridad": alertas_seguridad,
         "gitLog": forense.leer_historial_git(root),
@@ -255,7 +309,13 @@ def _nota_de_omitidos(dump: dict) -> str:
     el tope total) tienen que estar declarados: si no, el corrector puntúa una
     ausencia que en realidad es un recorte nuestro, y no puede distinguir un
     trabajo que no entregó algo de uno cuyo archivo no le llegó."""
-    om = dump.get("omitidos") or []
+    om = list(dump.get("omitidos") or [])
+    ocultas = dump.get("carpetasOcultas") or []
+    if ocultas:
+        om.append(
+            "carpetas no incluidas en el listado (filtro de la herramienta, no del trabajo): "
+            + ", ".join(ocultas)
+        )
     if not om:
         return ""
     items = "\n".join(f"  - {o}" for o in om)

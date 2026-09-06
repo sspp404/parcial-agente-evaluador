@@ -13,7 +13,7 @@ probarla con su propia cuenta de Anthropic en un par de minutos.
 ## Arranque rápido
 
 ```bash
-git clone https://github.com/sebanazarian/parcial-agente-evaluador
+git clone https://github.com/sspp404/parcial-agente-evaluador
 cd parcial-agente-evaluador/panel-evaluador
 python server/app.py      # macOS/Linux: python3 server/app.py
 ```
@@ -82,7 +82,8 @@ y es más simple.)*
 1. Entrá al panel (`http://localhost:8765`), creá tu contraseña.
 2. **Proyectos** → "＋ Nuevo proyecto" → nombre cualquiera, origen "ZIP / carpeta local", y en
    "Ruta local de la carpeta" apuntá a uno de los casos ya incluidos en el repo, por ejemplo
-   `../casos/flojo` (podés usar el botón "📁 Elegir…" para navegar en vez de tipear la ruta).
+   `casos/flojo` — relativa a la raíz del repositorio, como dice `COMO_CORRER.md` (podés usar el
+   botón "📁 Elegir…" para navegar en vez de tipear la ruta).
 3. **Nueva corrección** → elegí ese proyecto → "Correr corrección automáticamente".
 4. En unos segundos vas a ver la corrección real, validada, con el puntaje y las banderas —
    podés compararla contra lo que ya documentamos en `../calibracion.md`.

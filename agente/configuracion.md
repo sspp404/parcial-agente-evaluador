@@ -21,10 +21,13 @@ Antes de que el agente vea el contenido, la propia herramienta corre dos verific
 deterministas y se las entrega ya resueltas:
 
 - **Escaneo de seguridad**: caracteres invisibles (espacios de ancho cero, marcas de dirección de
-  texto RTL/LTR), mezcla de alfabetos visualmente parecidos (homóglifos cirílicos/griegos) y
-  comentarios HTML ocultos al renderizar en GitHub. Cualquier hallazgo se reporta como bandera B4
-  sin depender de que el modelo lo note por su cuenta — es la misma regla R4, reforzada con una
-  capa que no puede "no darse cuenta".
+  texto RTL/LTR), mezcla de alfabetos visualmente parecidos (homóglifos cirílicos/griegos),
+  comentarios HTML ocultos al renderizar en GitHub, y texto que imita los bloques que emite la
+  propia herramienta. El hallazgo le llega al corrector **siempre**, sin depender de que el modelo lo note
+  por su cuenta — es la misma regla R4, reforzada con una capa que no puede "no darse cuenta". La
+  bandera B4 la decide el corrector leyendo lo escondido: si es una instrucción dirigida a él,
+  R4 y B4; si es inocuo (un comentario de plantilla, una nota entre autores), se menciona como
+  observación y se sigue corrigiendo. Acusar de manipulación a quien no manipuló también cuesta.
 - **Métricas de `git log`**: cantidad de commits, autores y fecha del primero/último commit,
   cuando el repositorio evaluado conserva su historial de git (no llegó solo por ZIP). Se
   contrastan contra el relato de `DECISIONES.md` — una contradicción activa es la bandera B6. La

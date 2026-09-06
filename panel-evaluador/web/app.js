@@ -426,7 +426,7 @@ const Proyectos = {
         <td>${p.origen==='url'?'GitHub':'ZIP/local'}</td>
         <td>${p.url? '<code>'+esc(p.url)+'</code>':'—'}</td>
         <td>${n===1? '1 corrección' : n+' correcciones'}</td>
-        <td>${p.creado||'—'}</td>
+        <td>${esc(p.creado||'—')}</td>
         <td>
           <button class="btn sec sm js-editar" type="button" data-id="${esc(p.id)}">Editar</button>
           <button class="btn danger sm js-borrar" type="button" data-id="${esc(p.id)}">Borrar</button>

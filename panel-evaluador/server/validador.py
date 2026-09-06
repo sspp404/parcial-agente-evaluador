@@ -18,7 +18,11 @@ _RE_ARCHIVOS_LEIDOS = re.compile(r"Archivos\s+le[íi]dos:?\s*\**\s*(\d+)", re.IG
 _RE_DIM_SCORE = re.compile(r"(\d+)\s*/\s*(30|25|15)\b")
 _RE_DIM_NUM = re.compile(r"(\d)\s*[·.\-]")
 _RE_TOTAL = re.compile(r"Puntaje\s+total:?\s*\**\s*(\d+)\s*/\s*100", re.IGNORECASE)
-_RE_BANDERAS_HEADER = re.compile(r"##\s*Banderas", re.IGNORECASE)
+# Anclado a comienzo de línea: sin ^ , una justificación que mencione
+# "la sección ## Banderas de integridad" enganchaba ahí y el parser leía un
+# bloque vacío, reportando "ninguna bandera" con las banderas reales más abajo.
+_RE_BANDERAS_HEADER = re.compile(r"^##\s*Banderas", re.IGNORECASE | re.MULTILINE)
+_RE_FENCE = re.compile(r"```.*?```", re.DOTALL)
 _RE_NEXT_HEADER = re.compile(r"\n##\s")
 # Separadores admitidos después del código de bandera: el modelo alterna entre
 # medio punto, dos puntos, guion corto, guion largo y raya. Anclarse a uno solo
@@ -38,6 +42,13 @@ def _limpiar_markdown(texto: str) -> str:
     una bandera que no matchea desaparece del informe con la misma confianza
     con la que se reporta una real."""
     return texto.replace("**", "").replace("__", "").replace("`", "")
+
+
+def _sin_bloques_de_codigo(texto: str) -> str:
+    """Los bloques ``` del informe suelen citar el contrato o el repo evaluado.
+    Si no se sacan antes de buscar encabezados, un trabajo que incluya en su
+    README un "## Banderas de integridad" de ejemplo secuestra el parser."""
+    return _RE_FENCE.sub(lambda m: "\n" * m.group(0).count("\n"), texto)
 _RE_NINGUNA_BANDERA = re.compile(r"ninguna\s+bandera", re.IGNORECASE)
 _RE_SUGERENCIA = re.compile(r"##\s*Sugerencia", re.IGNORECASE)
 _RE_RUTA = re.compile(r"([\w\-./]+\.(md|txt|json|csv|ya?ml|py|js))|((prompts|corridas|casos|agente)/)", re.IGNORECASE)
@@ -84,8 +95,13 @@ def parse_correccion(texto: str) -> dict:
     elif len(out["dims"]) == 5:
         out["total"] = sum(d["score"] for d in out["dims"])
 
-    m_band = _RE_BANDERAS_HEADER.search(texto_limpio)
+    # La ÚLTIMA ocurrencia, no la primera: el informe puede citar el nombre de
+    # la sección antes de escribirla de verdad.
+    sin_fences = _sin_bloques_de_codigo(texto_limpio)
+    encabezados = list(_RE_BANDERAS_HEADER.finditer(sin_fences))
+    m_band = encabezados[-1] if encabezados else None
     if m_band:
+        texto_limpio = sin_fences
         resto = texto_limpio[m_band.end():]
         m_next = _RE_NEXT_HEADER.search(resto)
         bloque = texto_limpio[m_band.start():m_band.end() + (m_next.start() if m_next else len(resto))]
