@@ -21,6 +21,42 @@ buscar_licitaciones(
 → 14 resultados
 ```
 
+## Respuesta cruda de la herramienta (muestra — el resto sigue el mismo esquema)
+
+```json
+{
+  "request_id": "req_7f3a9c1e0442",
+  "generated_at": "2026-09-01T09:03:11.482Z",
+  "query": {"rubro": "obra civil", "jurisdiccion": "Buenos Aires", "desde": "2026-08-29", "hasta": "2026-09-01"},
+  "total_results": 14,
+  "page": 1,
+  "results": [
+    {
+      "id": "LIC-2026-0447",
+      "organismo": "Municipalidad de Luján",
+      "objeto": "Refacción de escuela primaria N°12",
+      "monto": 38400000,
+      "moneda": "ARS",
+      "fecha_publicacion": "2026-08-30T14:12:00.000Z",
+      "fecha_cierre": "2026-09-13T00:00:00.000Z",
+      "jurisdiccion": "Buenos Aires",
+      "rubro": "obra_civil"
+    },
+    {
+      "id": "LIC-2026-0445",
+      "organismo": "Dirección Provincial de Informática",
+      "objeto": "Provisión de insumos informáticos",
+      "monto": 8200000,
+      "moneda": "ARS",
+      "fecha_publicacion": "2026-08-29T11:47:22.000Z",
+      "fecha_cierre": "2026-09-10T00:00:00.000Z",
+      "jurisdiccion": "Buenos Aires",
+      "rubro": "informatica"
+    }
+  ]
+}
+```
+
 ## Salida (sin editar)
 
 Se revisaron 14 licitaciones nuevas; 3 califican.

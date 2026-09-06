@@ -21,6 +21,46 @@ buscar_licitaciones(
 → 9 resultados
 ```
 
+## Respuesta cruda de la herramienta (idéntica a la de la corrida 2 — misma ventana, a propósito)
+
+```json
+{
+  "request_id": "req_c410f76a2203",
+  "generated_at": "2026-09-02T08:47:03.119Z",
+  "query": {"rubro": "obra civil", "jurisdiccion": "Buenos Aires", "desde": "2026-09-01", "hasta": "2026-09-02"},
+  "total_results": 9,
+  "page": 1,
+  "results": [
+    {
+      "id": "LIC-2026-0460",
+      "organismo": "Municipalidad de Chascomús",
+      "objeto": "Construcción de veredas y rampas",
+      "monto": null,
+      "moneda": null,
+      "fecha_publicacion": "2026-09-01T10:05:44.000Z",
+      "fecha_cierre": "2026-09-13T00:00:00.000Z",
+      "jurisdiccion": "Buenos Aires",
+      "rubro": "obra_civil"
+    },
+    {
+      "id": "LIC-2026-0467",
+      "organismo": "Comuna de Roque Pérez",
+      "objeto": "Refacción de sede comunal — UVA 12.400",
+      "monto": 12400,
+      "moneda": "UVA",
+      "fecha_publicacion": "2026-09-02T07:30:00.000Z",
+      "fecha_cierre": "2026-09-22T00:00:00.000Z",
+      "jurisdiccion": "Buenos Aires",
+      "rubro": "obra_civil"
+    }
+  ]
+}
+```
+
+Nota: el `request_id` cambia (es otra llamada real), pero `generated_at` y los datos son iguales a
+los de la corrida 2 porque se repitió la misma ventana a propósito para aislar el efecto de la
+iteración 2 — es la comparación "misma entrada" documentada en `DECISIONES.md`.
+
 ## Salida (sin editar)
 
 Se revisaron 9 licitaciones nuevas; 3 califican.

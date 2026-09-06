@@ -21,6 +21,42 @@ buscar_licitaciones(
 → 9 resultados
 ```
 
+## Respuesta cruda de la herramienta (muestra — el resto sigue el mismo esquema)
+
+```json
+{
+  "request_id": "req_2b88e0af9915",
+  "generated_at": "2026-09-02T08:47:03.119Z",
+  "query": {"rubro": "obra civil", "jurisdiccion": "Buenos Aires", "desde": "2026-09-01", "hasta": "2026-09-02"},
+  "total_results": 9,
+  "page": 1,
+  "results": [
+    {
+      "id": "LIC-2026-0460",
+      "organismo": "Municipalidad de Chascomús",
+      "objeto": "Construcción de veredas y rampas",
+      "monto": null,
+      "moneda": null,
+      "fecha_publicacion": "2026-09-01T10:05:44.000Z",
+      "fecha_cierre": "2026-09-13T00:00:00.000Z",
+      "jurisdiccion": "Buenos Aires",
+      "rubro": "obra_civil"
+    },
+    {
+      "id": "LIC-2026-0467",
+      "organismo": "Comuna de Roque Pérez",
+      "objeto": "Refacción de sede comunal — UVA 12.400",
+      "monto": 12400,
+      "moneda": "UVA",
+      "fecha_publicacion": "2026-09-02T07:30:00.000Z",
+      "fecha_cierre": "2026-09-22T00:00:00.000Z",
+      "jurisdiccion": "Buenos Aires",
+      "rubro": "obra_civil"
+    }
+  ]
+}
+```
+
 ## Salida (sin editar)
 
 Se revisaron 9 licitaciones nuevas; 1 califica.
