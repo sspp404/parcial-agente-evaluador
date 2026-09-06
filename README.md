@@ -7,6 +7,7 @@
 | Nombre | Rol en el grupo |
 |---|---|
 | Sebastian Nazarian | |
+| Santiago Paris | |
 
 ## Qué construimos
 
