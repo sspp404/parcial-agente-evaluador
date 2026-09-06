@@ -8,6 +8,7 @@ propio localStorage aislado, así que el estado no era ni compartible ni
 confiable. Ahora vive en un solo lugar en disco.
 """
 import json
+import re
 import threading
 import time
 import uuid
@@ -57,6 +58,44 @@ class Storage:
             state["projects"].append(proj)
             self._save(state)
             return proj
+
+    def importar_urls(self, urls: list) -> dict:
+        """Crea un proyecto por cada URL de GitHub de la lista, en un solo
+        golpe — pensado para pegar 50 links de una vez en vez de crear
+        proyectos de a uno. Ignora líneas vacías, evita duplicar un
+        proyecto que ya apunta a la misma URL (podés volver a pegar la
+        misma lista con dos links nuevos y no te duplica los 48 viejos)."""
+        creados, duplicados, invalidos = [], [], []
+        with _LOCK:
+            state = self._load()
+            urls_existentes = {p["url"] for p in state["projects"] if p.get("url")}
+            for linea in urls:
+                url = linea.strip()
+                if not url:
+                    continue
+                m = re.match(r"^https?://github\.com/([^/\s]+)/([^/\s]+?)(?:\.git)?/?$", url)
+                if not m:
+                    invalidos.append(url)
+                    continue
+                if url in urls_existentes:
+                    duplicados.append(url)
+                    continue
+                owner, repo = m.group(1), m.group(2)
+                nombre = f"{owner}/{repo}"
+                ruta = f"../repos-a-corregir/{owner}-{repo}"
+                proj = {
+                    "id": _uid(),
+                    "nombre": nombre,
+                    "origen": "url",
+                    "url": url,
+                    "ruta": ruta,
+                    "creado": time.strftime("%Y-%m-%d"),
+                }
+                state["projects"].append(proj)
+                urls_existentes.add(url)
+                creados.append(proj)
+            self._save(state)
+        return {"creados": creados, "duplicados": duplicados, "invalidos": invalidos}
 
     def update_project(self, project_id: str, data: dict) -> dict | None:
         with _LOCK:

@@ -272,6 +272,20 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"project": STORAGE.create_project(body)})
             return
 
+        if route == "/api/projects/importar-urls":
+            body = self._read_json_body()
+            urls = body.get("urls", [])
+            if not isinstance(urls, list) or not urls:
+                self._send_json({"error": "Pegá al menos una URL, una por línea."}, status=400)
+                return
+            resultado = STORAGE.importar_urls(urls)
+            self._send_json({
+                "creados": len(resultado["creados"]),
+                "duplicados": resultado["duplicados"],
+                "invalidos": resultado["invalidos"],
+            })
+            return
+
         if route == "/api/corrections":
             body = self._read_json_body()
             if not body.get("projectId"):

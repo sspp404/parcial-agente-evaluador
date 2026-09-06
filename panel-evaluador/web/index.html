@@ -90,7 +90,10 @@
     <!-- ---------------- PROYECTOS ---------------- -->
     <div class="view" id="v-proyectos">
       <div class="pagehead"><div><h1>Proyectos</h1><div class="sub">Los trabajos que tu grupo va a corregir (los tuyos de prueba y los reales de la prueba de fuego)</div></div>
-        <button class="btn" onclick="Proyectos.abrirModal()">＋ Nuevo proyecto</button>
+        <div class="row">
+          <button class="btn sec" onclick="Proyectos.abrirImportar()">📋 Importar URLs</button>
+          <button class="btn" onclick="Proyectos.abrirModal()">＋ Nuevo proyecto</button>
+        </div>
       </div>
       <div class="card"><div id="tabla-proyectos"></div></div>
     </div>
@@ -163,20 +166,38 @@
 
     <!-- ---------------- LOTE ---------------- -->
     <div class="view" id="v-lote">
-      <div class="pagehead"><div><h1>Lote</h1><div class="sub">Corré varios proyectos seguidos — pensado para la prueba de fuego, cuando hay muchos repos que corregir</div></div></div>
-      <div class="grid g2">
-        <div class="card">
-          <h2>Elegí los proyectos</h2>
-          <div id="lote-lista" style="margin-top:10px"></div>
-          <div class="field2" style="margin-top:14px"><label class="lbl">Fecha de corrección</label><input class="inp" id="lote-fecha" type="date"></div>
-          <button class="btn w" id="lote-btn" style="margin-top:6px" onclick="Lote.correr()" disabled>Evaluar seleccionados</button>
-          <div class="hint" id="lote-hint" style="margin-top:8px">Corren de a uno, en orden — así el caché de la rúbrica se aprovecha entre corrida y corrida.</div>
+      <div class="pagehead"><div><h1>Lote</h1><div class="sub">Corré muchos proyectos seguidos — pensado para la prueba de fuego, cuando hay decenas de repos que corregir</div></div></div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div class="row" style="flex-wrap:wrap">
+            <input class="inp" id="lote-filtro" placeholder="🔍 Buscar por nombre…" style="width:200px" oninput="Lote.render()">
+            <button class="btn sec sm" onclick="Lote.marcarTodos(true)">Seleccionar todos</button>
+            <button class="btn sec sm" onclick="Lote.marcarTodos(false)">Ninguno</button>
+            <span class="hint" id="lote-contador"></span>
+          </div>
+          <div class="row" style="flex-wrap:wrap">
+            <input class="inp" id="lote-fecha" type="date" style="width:150px">
+            <select class="inp" id="lote-paralelismo" style="width:140px" title="Cuántas corridas en simultáneo">
+              <option value="1">1 (secuencial)</option>
+              <option value="2" selected>2 a la vez</option>
+              <option value="3">3 a la vez</option>
+              <option value="4">4 a la vez</option>
+            </select>
+            <button class="btn" id="lote-btn" onclick="Lote.correr()" disabled>▶ Evaluar seleccionados</button>
+            <button class="btn danger" id="lote-btn-detener" onclick="Lote.detener()" style="display:none">■ Detener</button>
+          </div>
         </div>
-        <div class="card">
-          <h2>Progreso</h2>
-          <div class="row" style="margin:10px 0"><div class="bar-track" style="flex:1"><div class="bar-fill" id="lote-progreso-fill" style="width:0%;background:var(--accent)"></div></div><div class="bar-val" id="lote-progreso-txt" style="width:auto;margin-left:8px">0/0</div></div>
-          <div id="lote-resultados"></div>
+        <div id="lote-lista" style="margin-top:14px;max-height:280px;overflow:auto"></div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <h2 style="margin:0">Progreso</h2>
+          <span class="hint" id="lote-tiempo"></span>
         </div>
+        <div class="row" style="margin:10px 0"><div class="bar-track" style="flex:1"><div class="bar-fill" id="lote-progreso-fill" style="width:0%;background:var(--accent)"></div></div><div class="bar-val" id="lote-progreso-txt" style="width:auto;margin-left:8px">0/0</div></div>
+        <div id="lote-resultados" style="overflow-x:auto"></div>
       </div>
     </div>
 

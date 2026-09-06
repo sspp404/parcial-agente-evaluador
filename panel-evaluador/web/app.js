@@ -314,6 +314,38 @@ const Proyectos = {
     document.getElementById('pm-btn-explorar').style.display = esZip ? 'inline-flex' : 'none';
     if(!esZip){ document.getElementById('pm-explorador').style.display = 'none'; }
   },
+  abrirImportar(){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" onclick="if(event.target===this)UI_closeModal()">
+        <div class="modal">
+          <span class="modal-close" onclick="UI_closeModal()">×</span>
+          <h2 style="margin-top:0">Importar URLs de GitHub</h2>
+          <p class="hint" style="margin:4px 0 12px">Una URL por línea. Pensado para pegar el listado completo de repos a corregir de una sola vez — si volvés a pegar una lista que ya tiene alguna de estas URLs, no la duplica.</p>
+          <textarea class="inp" id="im-urls" rows="10" placeholder="https://github.com/usuario1/trabajo-final&#10;https://github.com/usuario2/trabajo-final&#10;https://github.com/usuario3/trabajo-final"></textarea>
+          <div class="row" style="justify-content:flex-end;margin-top:14px">
+            <button class="btn sec" onclick="UI_closeModal()">Cancelar</button>
+            <button class="btn" onclick="Proyectos.importarUrls()">Crear proyectos</button>
+          </div>
+        </div>
+      </div>`;
+  },
+  async importarUrls(){
+    const texto = document.getElementById('im-urls').value;
+    const urls = texto.split('\n').map(l=>l.trim()).filter(Boolean);
+    if(!urls.length){ UI.toast('Pegá al menos una URL.', 'bad'); return; }
+    try{
+      const r = await Api.post('/api/projects/importar-urls', {urls});
+      await refreshProjects();
+      UI_closeModal();
+      this.render();
+      updateNavBadges();
+      let msg = `${r.creados} proyecto(s) creado(s)`;
+      if(r.duplicados.length) msg += ` · ${r.duplicados.length} ya existían`;
+      if(r.invalidos.length) msg += ` · ${r.invalidos.length} línea(s) no eran una URL de GitHub válida`;
+      UI.toast(msg, r.invalidos.length ? 'warn' : 'ok', 7000);
+    }catch(e){ UI.toast(e.message, 'bad'); }
+  },
   async abrirExplorador(){
     const box = document.getElementById('pm-explorador');
     box.style.display = 'block';
@@ -802,64 +834,120 @@ const Rubrica = {
 /* ---------------------------------------------------------- Lote */
 const Lote = {
   corriendo: false,
+  detenerPedido: false,
+  seleccionados: new Set(),
+
   render(){
     const box = document.getElementById('lote-lista');
-    if(!STATE.projects.length){ box.innerHTML = '<div class="empty">Todavía no hay proyectos. Creá alguno en "Proyectos".</div>'; document.getElementById('lote-btn').disabled = true; return; }
-    box.innerHTML = STATE.projects.map(p=>
-      `<label class="checkline" style="margin-bottom:8px"><input type="checkbox" class="lote-check" value="${p.id}" onchange="Lote.actualizarBoton()"><b>${esc(p.nombre)}</b> <span class="hint">${esc(p.ruta)}</span></label>`
-    ).join('');
+    if(!STATE.projects.length){
+      box.innerHTML = '<div class="empty">Todavía no hay proyectos. Creá alguno en "Proyectos", o importá varios de golpe con "📋 Importar URLs".</div>';
+      document.getElementById('lote-btn').disabled = true;
+      return;
+    }
+    const filtro = (document.getElementById('lote-filtro').value || '').toLowerCase();
+    const visibles = STATE.projects.filter(p => p.nombre.toLowerCase().includes(filtro));
+    box.innerHTML = visibles.map(p =>
+      `<label class="checkline" style="margin-bottom:8px;display:flex">
+        <input type="checkbox" class="lote-check" value="${p.id}" ${this.seleccionados.has(p.id)?'checked':''} onchange="Lote.onCheck('${p.id}', this.checked)">
+        <b>${esc(p.nombre)}</b> <span class="hint">${esc(p.ruta)}</span>
+      </label>`
+    ).join('') || '<div class="empty">Ningún proyecto coincide con la búsqueda.</div>';
     if(!document.getElementById('lote-fecha').value) document.getElementById('lote-fecha').value = new Date().toISOString().slice(0,10);
-    document.getElementById('lote-resultados').innerHTML = '';
-    document.getElementById('lote-progreso-fill').style.width = '0%';
-    document.getElementById('lote-progreso-txt').textContent = '0/0';
     this.actualizarBoton();
   },
-  actualizarBoton(){
-    const n = document.querySelectorAll('.lote-check:checked').length;
-    document.getElementById('lote-btn').disabled = (n === 0 || this.corriendo);
+  onCheck(id, marcado){
+    if(marcado) this.seleccionados.add(id); else this.seleccionados.delete(id);
+    this.actualizarBoton();
   },
+  marcarTodos(marcar){
+    const filtro = (document.getElementById('lote-filtro').value || '').toLowerCase();
+    const visibles = STATE.projects.filter(p => p.nombre.toLowerCase().includes(filtro));
+    visibles.forEach(p => marcar ? this.seleccionados.add(p.id) : this.seleccionados.delete(p.id));
+    this.render();
+  },
+  actualizarBoton(){
+    const n = this.seleccionados.size;
+    document.getElementById('lote-btn').disabled = (n === 0 || this.corriendo);
+    document.getElementById('lote-contador').textContent = n ? `${n} seleccionado(s) de ${STATE.projects.length}` : '';
+  },
+  _fmtSeg(s){ return s < 60 ? `${Math.round(s)}s` : `${Math.floor(s/60)}m ${Math.round(s%60)}s`; },
+
   async correr(){
-    const ids = [...document.querySelectorAll('.lote-check:checked')].map(c=>c.value);
+    const ids = [...this.seleccionados];
     if(!ids.length) return;
     const fecha = document.getElementById('lote-fecha').value || new Date().toISOString().slice(0,10);
+    const paralelismo = Math.max(1, parseInt(document.getElementById('lote-paralelismo').value, 10) || 1);
+
     this.corriendo = true;
+    this.detenerPedido = false;
     document.getElementById('lote-btn').disabled = true;
-    document.getElementById('lote-hint').textContent = `Corriendo ${ids.length} proyecto(s), de a uno — no cierres esta pestaña.`;
+    document.getElementById('lote-btn-detener').style.display = 'inline-flex';
+    document.getElementById('lote-filtro').disabled = true;
+
     const resBox = document.getElementById('lote-resultados');
-    resBox.innerHTML = ids.map(id=>{
-      const p = STATE.projects.find(x=>x.id===id);
-      return `<div class="kv" id="lote-row-${id}"><span>${esc(p.nombre)}</span><span class="tag t-muted">pendiente</span></div>`;
-    }).join('');
+    resBox.innerHTML = `<table><tr><th>Proyecto</th><th>Estado</th><th>Tiempo</th></tr>
+      ${ids.map(id=>{
+        const p = STATE.projects.find(x=>x.id===id);
+        return `<tr id="lote-row-${id}"><td>${esc(p.nombre)}</td><td><span class="tag t-muted">pendiente</span></td><td class="hint">—</td></tr>`;
+      }).join('')}</table>`;
 
     let hechos = 0;
-    for(const id of ids){
+    const inicio = Date.now();
+    const actualizarTiempo = () => {
+      const transcurrido = (Date.now()-inicio)/1000;
+      const promedio = hechos ? transcurrido/hechos : null;
+      const restante = promedio ? Math.max(0, (ids.length-hechos)*promedio/paralelismo) : null;
+      document.getElementById('lote-tiempo').textContent = restante!=null
+        ? `${this._fmtSeg(transcurrido)} transcurridos · ~${this._fmtSeg(restante)} restante`
+        : `${this._fmtSeg(transcurrido)} transcurridos`;
+    };
+
+    const correrUno = async (id) => {
       const p = STATE.projects.find(x=>x.id===id);
       const row = document.getElementById('lote-row-'+id);
-      row.querySelector('.tag').outerHTML = '<span class="tag t-warn">corriendo…</span>';
+      const t0 = Date.now();
+      row.children[1].innerHTML = '<span class="tag t-warn">corriendo…</span>';
       try{
         const res = await Api.post('/api/run/auto', {projectId:id, fecha});
         if(res.truncado){
-          row.querySelector('.tag').outerHTML = `<span class="tag t-bad">se cortó por tokens — revisar a mano</span>`;
+          row.children[1].innerHTML = `<span class="tag t-bad">se cortó por tokens</span>`;
         } else if(res.validacion.veredicto === 'bad'){
-          row.querySelector('.tag').outerHTML = `<span class="tag t-bad">${res.validacion.parsed.total??'?'}/100 — formato inválido, no se guardó</span>`;
+          row.children[1].innerHTML = `<span class="tag t-bad">${res.validacion.parsed.total??'?'}/100 — formato inválido</span>`;
         } else {
           await Api.post('/api/corrections', {projectId:id, fecha, raw:res.salida});
           const r = rangoDe(res.validacion.parsed.total);
-          row.querySelector('.tag').outerHTML = `<span class="tag t-${r.tipo}">${res.validacion.parsed.total}/100 — guardada</span>`;
+          row.children[1].innerHTML = `<span class="tag t-${r.tipo}">${res.validacion.parsed.total}/100 — guardada</span>`;
         }
       }catch(e){
-        row.querySelector('.tag').outerHTML = `<span class="tag t-bad">error: ${esc(e.message.slice(0,60))}</span>`;
+        row.children[1].innerHTML = `<span class="tag t-bad" title="${esc(e.message)}">error</span>`;
       }
+      row.children[2].textContent = this._fmtSeg((Date.now()-t0)/1000);
       hechos++;
       document.getElementById('lote-progreso-fill').style.width = Math.round(hechos/ids.length*100)+'%';
       document.getElementById('lote-progreso-txt').textContent = `${hechos}/${ids.length}`;
+      actualizarTiempo();
+    };
+
+    for(let i=0; i<ids.length; i+=paralelismo){
+      if(this.detenerPedido){
+        ids.slice(i).forEach(id=>{ document.getElementById('lote-row-'+id).children[1].innerHTML = '<span class="tag t-muted">cancelado</span>'; });
+        break;
+      }
+      const tanda = ids.slice(i, i+paralelismo);
+      await Promise.all(tanda.map(correrUno));
     }
 
     this.corriendo = false;
-    document.getElementById('lote-hint').textContent = 'Listo. Las que dicen "guardada" ya están en Resultados; las demás necesitan una corrida manual.';
-    await Promise.all([refreshCorrections()]);
+    document.getElementById('lote-btn-detener').style.display = 'none';
+    document.getElementById('lote-filtro').disabled = false;
+    document.getElementById('lote-tiempo').textContent += this.detenerPedido ? ' · detenido a pedido' : ' · listo';
+    await refreshCorrections();
     updateNavBadges();
     this.actualizarBoton();
+  },
+  detener(){
+    this.detenerPedido = true;
+    document.getElementById('lote-btn-detener').disabled = true;
   },
 };
 
