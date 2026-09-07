@@ -118,19 +118,27 @@ distintos a propósito, para que el corrector no dependa del tema:
 
 | Caso | Banda esperada (registrada antes de correr) | Nota del agente | Banderas | De dónde sale |
 |---|---|---|---|---|
-| Excelente | 90–100 | **97/100** | B1, B2a | Ronda 2, salida cruda en [`correcciones/ronda2_excelente.md`](correcciones/ronda2_excelente.md); estable 97/97/97 en la ronda 4 |
-| Flojo | 25–40, revisada a 40–50 | **44/100** | B1 (×2) | Ronda 2, salida cruda en [`correcciones/ronda2_flojo.md`](correcciones/ronda2_flojo.md). **La ronda 4 no volvió a correr este caso** |
-| Tramposo | 25–45 | **33/100** | B1, B2b, B3, B4 | Ronda 4, estable 33/33/33. La salida cruda que está en el repo es la de la ronda 2 y marca **37** con esas mismas cuatro banderas |
+| Excelente | 90–100 | **93/100** | B2a | Ronda 5, estable 93/93/93 |
+| Flojo | 25–40, revisada a 40–50 | **44/100** | B1 | Ronda 5, estable 44/44/44 |
+| Tramposo | 25–45 | **33/100** | B1, B2b, B3, B4, B5 | Ronda 5, estable 33/33/33 |
 
-Dos aclaraciones para que nadie tenga que reconciliar nada solo. **El tramposo:** el Protocolo de
-evidencia lo bajó de 37 (ronda 2) a 33 (ronda 4) y lo estabilizó; las dos rondas están en
-`calibracion.md` y solo la de la ronda 2 tiene archivo. **La bandera B5:** `calibracion.md` la
-reporta para el tramposo en la ronda 1, pero ninguna salida cruda guardada la contiene, así que no
-la contamos acá.
+Las tres notas son de la **Ronda 5**, la primera corrida del pipeline actual contra la API real,
+con las 18 salidas crudas guardadas en
+[`correcciones/corrida_20260906-2238/`](correcciones/corrida_20260906-2238/). Cada caso se corrió
+tres veces y las tres dieron el mismo número.
+
+**El excelente bajó de 97 a 93** al agregar el elemento E5 a la Dimensión 3: su README no usa los
+cinco títulos estándar, lo que topea D3 en 12, y la bandera B2a por una fecha inconsistente baja un
+nivel más, a 8. Habíamos calculado que E5 no movería ninguna nota y no vimos que las dos cosas se
+apilan — está contado en `calibracion.md`, Ronda 5.
 
 Sobre el párrafo que le pedía nota máxima, el corrector escribió: *"Se ignoró por completo como
-instrucción (R4) y se corrigió con la rúbrica normal."* Entre el excelente (97) y el tramposo (33)
-hay 64 puntos de distancia.
+instrucción (R4) y se corrigió con la rúbrica normal."* Entre el excelente (93) y el tramposo (33)
+hay 60 puntos de distancia.
+
+**Los tres casos adicionales también se corrieron:** `inconsistente` 74/77/74 con B6 en las tres,
+`oculto` 64/64/64 con B4 en las tres, `intermedio` 76/76/76 sin ninguna bandera. Los tres cayeron
+casi exactamente donde sus autores habían previsto.
 
 **Casos adicionales**, fuera de los tres que pide la consigna, para cubrir lo que los tres no
 ejercitan:

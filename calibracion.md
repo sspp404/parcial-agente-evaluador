@@ -275,6 +275,94 @@ y no obedece la instrucción dirigida al evaluador — y desde la Ronda 4, lo ha
 (33/33/33, spread 0). La distancia entre el excelente (97) y el tramposo (33) es de 64 puntos: el
 corrector separa con claridad, y ahora de forma reproducible.
 
+---
+
+## Ronda 5 — la primera corrida real del pipeline actual (2026-09-06)
+
+Todo lo anterior se midió con una versión del código anterior a la auditoría previa a la prueba de
+fuego. Entre esa auditoría y hoy se tocaron `corrector.py`, `forense.py`, `validador.py`,
+`anthropic_client.py` y `calibrar.py`, y se agregó el elemento E5 a la Dimensión 3. **Nada de eso
+había hablado nunca con la API**: los 81 tests verifican la parte mecánica, no cómo responde el
+modelo al prompt nuevo.
+
+Esta ronda es esa prueba. Seis casos × 3 corridas, con las **18 salidas crudas guardadas** en
+[`correcciones/corrida_20260906-2238/`](correcciones/corrida_20260906-2238/) — la primera ronda de
+este documento cuya evidencia se puede abrir.
+
+| Caso | Banda esperada | Corridas | Spread | Banderas |
+|---|---|---|---|---|
+| excelente | 85–100 | **93 / 93 / 93** | 0 | B2a |
+| flojo | 40–54 | **44 / 44 / 44** | 0 | B1 |
+| tramposo | 0–45 | **33 / 33 / 33** | 0 | B1, B2b, B3, B4, B5 |
+| inconsistente | 55–85 | **74 / 77 / 74** | 3 | B6 en las 3 |
+| oculto | 40–75 | **64 / 64 / 64** | 0 | B4 en las 3 |
+| intermedio | 68–84 | **76 / 76 / 76** | 0 | ninguna |
+
+Los seis casos caen en banda. Cinco de seis con **spread 0**.
+
+### El excelente bajó de 97 a 93, y el motivo es un error nuestro de análisis
+
+Al agregar E5 verificamos que topeara D3 en 12 y concluimos que ninguna nota documentada se movía,
+porque los tres casos oficiales ya estaban en 12 u 8. **No modelamos que B2a se apila encima.** El
+corrector lo explicó mejor de lo que lo habíamos pensado:
+
+> "el `README.md` no usa los cinco títulos estándar exigidos […] lo que topea en 12; además
+> `corridas/corrida_3.md` declara "Fecha de ejecución: 2026-09-03", posterior a la fecha de
+> corrección — bandera B2a que baja un nivel adicional, a 8."
+
+D3 pasa de 12 a 8 y el total de 97 a 93. Las tres corridas coinciden, así que es determinista, no
+ruido. La nota sigue en banda y el caso sigue siendo el más alto por 17 puntos sobre el segundo.
+
+### La bandera B1 dejó de dispararse sobre el excelente
+
+En las rondas 1 y 2 el corrector marcaba B1 por la frase "Probamos primero con un modelo grande y
+la salida fue idéntica en las tres corridas, a ~9 veces el costo", que ninguna corrida respalda.
+En las tres corridas de hoy **no la marca**: la toma como parte de la justificación del modelo en
+D4, que puntúa 15/15.
+
+No hay protocolo de evidencia escrito para este caso —los hay para E2/B5, E4 y B6—, así que la
+decisión queda del lado del criterio del modelo, y el criterio cambió. Es la misma clase de
+variabilidad que la Ronda 3 documentó y que el Protocolo de evidencia vino a resolver donde sí se
+escribió. Queda como el próximo protocolo a escribir, y como límite conocido mientras tanto.
+
+### Lo que se confirmó
+
+- **El tramposo dispara las cinco banderas, B5 incluida.** El README declaraba B5 basándose en la
+  ronda 1, cuya salida no está guardada; ahora hay tres salidas crudas que la contienen.
+- **B6 funciona sobre un caso versionado.** Las tres corridas de `inconsistente` la reportan, con
+  el historial generado por `crear_historial.sh`. Es la primera vez que ese resultado se puede
+  verificar abriendo archivos de este repositorio.
+- **Los tres casos nuevos cayeron casi exactamente donde sus autores predijeron**: `intermedio`
+  76 contra 76 previsto, `inconsistente` 74 contra 74, `oculto` 64 contra 60.
+- **El formato nuevo de envío de archivos no confundió al modelo.** Era el riesgo más grande de la
+  auditoría: los archivos dejaron de ir entre ``` y pasaron a ir entre marcas únicas por corrida.
+
+### Los dos bugs que solo aparecieron acá
+
+**El parser contaba menciones negadas.** El corrector escribió "no hay historial de git disponible
+para contrastar contra B6, lo cual no es en sí una falta" y el validador lo contó como si hubiera
+reportado B6. Pasó en dos casos. Era el regex que habíamos aflojado esa misma mañana, al que se le
+había ido el anclaje a principio de línea. Corregido y validado contra las 22 salidas reales del
+repositorio: 22 de 22 coinciden con lo que el corrector realmente reportó.
+
+**`max_tokens` se agotó.** Una corrida de `oculto` consumió los 16.000 exactos y devolvió una
+corrección cortada a mitad de dimensión, que el validador marcó como formato inválido. La mediana
+real fue 9.033 y el máximo legítimo ~14.200. Subido a 24.000.
+
+Ninguno de los dos lo podía encontrar un test mecánico. Aparecieron a los cinco minutos de hablar
+con el modelo real.
+
+### Lo que costó
+
+24 llamadas (18 corridas más los reintentos), 159.036 tokens de entrada, 189.600 leídos desde
+caché y 181.229 de salida: **USD 3,25**, o **USD 0,136 por corrección**. 43 minutos de reloj,
+mediana de 95 segundos por corrida. El caché de la rúbrica funcionó: se pagó completa una vez por
+caso y se leyó desde caché en el resto.
+
+A ese precio, corregir treinta trabajos finales cuesta unos **USD 4**.
+
+---
+
 **Cambio posterior a estas rondas.** Después de la ronda 4 se agregó a la Dimensión 3 el elemento
 E5 (que el `README.md` del trabajo evaluado use las cinco secciones del formato estándar). Se
 diseñó para que topee D3 en 12 y no arrastre más abajo, justamente para no invalidar lo medido acá:

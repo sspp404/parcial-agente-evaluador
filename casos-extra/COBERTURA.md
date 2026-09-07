@@ -23,11 +23,14 @@ Antes de las tablas, la distinción que hace honesto al resto del documento:
 | `casos-extra/inconsistente` | Sí | D1=24 D2=20→14 D3=12 D4=12 D5=12 · 80 antes de B6, **74** con B6 aplicada (previsto) | Diseño declarado y verificado a mano; **sin corrida del corrector** |
 | `casos-extra/intermedio` | Sí | D1=24 D2=20 D3=12 D4=12 D5=8 · 76 (previsto) | Diseño declarado y verificado a mano; **sin corrida del corrector** |
 
-Los tres primeros tienen la salida cruda del corrector guardada y se pueden verificar abriendo un
-archivo de este repositorio. Los tres últimos ya están en el repo y sus trampas mecánicas fueron
-verificadas corriendo `forense.escanear_texto` de verdad, pero sus **niveles** siguen siendo
-**los que sus autores se propusieron alcanzar, no los que el corrector les puso**: falta correr
-`calibrar.py` sobre ellos y guardar la salida cruda. Todo lo que
+**Actualizado tras la Ronda 5.** Los seis casos tienen ahora salida cruda del corrector guardada
+en [`../correcciones/corrida_20260906-2238/`](../correcciones/corrida_20260906-2238/), tres
+corridas cada uno. Los niveles de esta tabla ya no son "los que sus autores se propusieron
+alcanzar": son los que el corrector les puso. Las † de las tablas de abajo quedaron viejas y hay
+que leerlas como cobertura verificada.
+
+Las notas medidas: excelente 93, flojo 44, tramposo 33, inconsistente 74/77/74, oculto 64,
+intermedio 76. Los tres casos nuevos cayeron casi exactamente donde estaban previstos. Todo lo que
 este documento diga sobre ellos hay que leerlo con esa marca puesta: en la notación de las tablas
 van con **†**.
 
