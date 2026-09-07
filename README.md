@@ -10,10 +10,14 @@
 | Santiago Paris | Construcción conjunta de lo anterior. Además, auditoría del corrector previa a la prueba de fuego y corrección de los hallazgos: el clon superficial que falseaba B6, el filtro del dump, los falsos positivos del escaneo forense, la fuga del delimitador, la tolerancia del parser y los bugs del panel. |
 
 **Sobre el historial de commits.** El sistema se construyó **de a dos, trabajando juntos**, pero
-durante la primera etapa se commiteaba desde una sola máquina, así que esos commits quedaron
+durante la primera etapa se commiteaba desde una sola máquina, así que esos 20 commits quedaron
 firmados por una sola persona. El 2026-09-06 se reescribió el historial para agregarles el trailer
-`Co-Authored-By` y que refleje quiénes lo escribieron: las fechas y los mensajes son los originales,
-lo único que cambió son los identificadores de commit.
+`Co-Authored-By` del otro integrante: las fechas y los mensajes son los originales, lo único que
+cambió son los identificadores de commit.
+
+Los 19 commits siguientes —la auditoría previa a la prueba de fuego y sus arreglos— están firmados
+por Santiago Paris y no llevan ese trailer. O sea que el historial muestra las dos cosas por
+separado: la construcción conjunta y quién hizo la revisión final.
 
 Lo dejamos anotado porque en un trabajo cuya tesis es *puntuar solo lo verificable* corresponde
 decir que el historial fue corregido, y no presentarlo como si siempre hubiera sido así.
