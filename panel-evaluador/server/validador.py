@@ -28,14 +28,15 @@ _RE_NEXT_HEADER = re.compile(r"\n##\s")
 # medio punto, dos puntos, guion corto, guion largo y raya. Anclarse a uno solo
 # produce falsos negativos silenciosos — exactamente el bug de la Ronda 4, donde
 # el regex conocía B1..B5 y descartaba cada B6 sin avisar (ver calibracion.md).
-# Sin exigir prefijo ni separador: el modelo escribe "B4 ·", "- B4:", "1. B4 —",
-# "(B4)" y "**B4**" según el día, y cada variante que el regex no contemplaba
-# desaparecía en silencio del informe. Se busca el código en cualquier parte del
-# bloque de banderas —que ya está acotado— y se descartan las menciones negadas.
-_RE_BANDERA_ITEM = re.compile(r"\bB(2a|2b|[1-6])\b")
-_RE_MENCION_NEGADA = re.compile(
-    r"(no se detect|ninguna bandera|sin banderas|no aplica|no corresponde|no dispar)",
-    re.IGNORECASE,
+# El código tiene que ABRIR la línea, no aparecer en cualquier parte de ella.
+# Sin el anclaje, una frase como "no hay historial de git para contrastar contra
+# B6, lo cual no es en sí una falta" se contaba como si B6 se hubiera reportado
+# — pasó de verdad, en la primera corrida real contra la API. Pero el prefijo es
+# generoso: viñeta, número, paréntesis y negritas, porque el modelo alterna entre
+# "B4 ·", "- B4:", "1. B4 —", "(B4)" y "**B4**" según el día.
+_RE_BANDERA_ITEM = re.compile(
+    r"^\s*(?:[-*+•]|\d+[.)])?\s*[(\[]?\**\s*B(2a|2b|[1-6])\b",
+    re.MULTILINE,
 )
 
 
@@ -112,13 +113,10 @@ def parse_correccion(texto: str) -> dict:
         m_next = _RE_NEXT_HEADER.search(resto)
         bloque = texto_limpio[m_band.start():m_band.end() + (m_next.start() if m_next else len(resto))]
         vistas = []
-        for linea in bloque.split("\n"):
-            if _RE_MENCION_NEGADA.search(linea):
-                continue
-            for mb in _RE_BANDERA_ITEM.finditer(linea):
-                cod = "B" + mb.group(1)
-                if cod not in vistas:
-                    vistas.append(cod)
+        for mb in _RE_BANDERA_ITEM.finditer(bloque):
+            cod = "B" + mb.group(1)
+            if cod not in vistas:
+                vistas.append(cod)
         out["banderas"] = vistas
         out["ningunaBandera"] = bool(_RE_NINGUNA_BANDERA.search(bloque)) and not vistas
     else:

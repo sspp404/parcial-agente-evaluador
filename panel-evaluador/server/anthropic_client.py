@@ -46,7 +46,12 @@ def call(
     system_text: str,
     user_text: str,
     cached_prefix: str | None = None,
-    max_tokens: int = 16000,
+    # 16000 se quedó corto en la primera corrida real contra la API: el caso
+    # `oculto` lo agotó exacto y devolvió una corrección truncada a mitad de una
+    # dimensión, que el validador marcó como formato inválido. La mediana real de
+    # las 18 corridas fue 9.033 tokens y el máximo legítimo rondó los 14.200, así
+    # que 24000 deja margen sin pagar de más: solo se cobra lo que se genera.
+    max_tokens: int = 24000,
     temperature: float | None = None,
     timeout: int = 180,
 ) -> dict:
