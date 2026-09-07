@@ -11,6 +11,7 @@ corridas seguidas (calibración, prueba de fuego), esto es la diferencia más
 grande en costo, más que cualquier recorte de contenido del repo evaluado.
 """
 import json
+import ssl
 import time
 import urllib.error
 import urllib.request
@@ -21,6 +22,22 @@ ANTHROPIC_VERSION = "2023-06-01"
 
 class AnthropicError(RuntimeError):
     pass
+
+
+def _contexto_ssl():
+    """Un Python bajado de python.org en macOS viene SIN certificados raíz: el
+    directorio que busca está vacío y toda conexión HTTPS muere con
+    CERTIFICATE_VERIFY_FAILED. El instalador trae un "Install Certificates.command"
+    para eso, pero mucha gente no lo corre nunca y el error no dice qué hacer.
+
+    Si el paquete `certifi` está disponible, lo usamos; si no, se devuelve None y
+    urllib usa la configuración por defecto (que en Linux y en el Python de
+    Homebrew funciona sin más)."""
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        return None
 
 
 def call(
@@ -73,6 +90,7 @@ def call(
             "anthropic-version": ANTHROPIC_VERSION,
         },
     )
+    contexto_ssl = _contexto_ssl()
     # Un 429 (rate limit) o un 529 (sobrecarga) son transitorios: sin reintento,
     # una corrida se pierde entera por un pico de tráfico ajeno. En la prueba de
     # fuego, con varias correcciones seguidas, eso es cuestión de tiempo.
@@ -80,7 +98,7 @@ def call(
     ultimo_error = None
     for intento in range(len(ESPERAS) + 1):
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=timeout, context=contexto_ssl) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
             break
         except urllib.error.HTTPError as e:
@@ -101,6 +119,12 @@ def call(
                 ultimo_error = f"No se pudo conectar con Anthropic: {e.reason}"
                 time.sleep(ESPERAS[intento])
                 continue
+            if "CERTIFICATE_VERIFY_FAILED" in str(e.reason):
+                raise AnthropicError(
+                    "Tu instalación de Python no tiene certificados raíz, así que no puede "
+                    "validar la conexión con Anthropic. Se arregla con: "
+                    "python3 -m pip install --upgrade certifi"
+                )
             raise AnthropicError(f"No se pudo conectar con Anthropic: {e.reason}")
         except TimeoutError:
             # Un timeout es tan transitorio como un 429: no reintentarlo perdía

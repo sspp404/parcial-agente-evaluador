@@ -54,6 +54,18 @@ detectado y una vista enmascarada de la key (nunca completa). El caché dura 5 m
 cambiás el secreto en Doppler, tarda como máximo eso en reflejarse acá, o usá "Probar conexión"
 para forzar el refresco.
 
+## Si la conexión falla con "CERTIFICATE_VERIFY_FAILED"
+
+Un Python bajado de python.org en macOS viene **sin certificados raíz**, así que toda conexión
+HTTPS falla antes de salir de la máquina. No es la API key ni la red. Se arregla una vez:
+
+```bash
+python3 -m pip install --upgrade certifi
+```
+
+El cliente detecta `certifi` solo y lo usa. Si igual falla, el error ahora te dice esto mismo en
+vez de escupir un stacktrace de OpenSSL.
+
 ## Verificar que todo funciona, sin gastar un peso
 
 ```bash
