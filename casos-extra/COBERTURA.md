@@ -139,6 +139,21 @@ verificada mecánicamente (0 alertas del escaneo forense) y **no** por una corri
 
 ## 3 · Los huecos, uno por uno
 
+### Hueco 0 · Ningún caso cumple E5, el elemento nuevo de D3
+
+`rubrica.md` agregó a la Dimensión 3 un quinto elemento verificable: que el `README.md` del trabajo
+evaluado use las cinco secciones del formato estándar de la materia. **Los seis casos de esta
+batería usan títulos propios**, así que ninguno ejercita ese elemento en positivo: todos lo
+incumplen. La cobertura del elemento existe solo por el lado negativo.
+
+No mueve ninguna nota —E5 topea D3 en 12 y los tres casos oficiales ya estaban en 12 o por
+debajo—, pero significa que **nadie probó todavía que el corrector reconozca un README bien
+formateado**. Cubrirlo es barato: alcanza con un caso cuyo README use los cinco títulos. No lo
+hicimos porque reescribir el README de un caso existente rompería la correspondencia con su salida
+cruda en `correcciones/`, que cita los títulos actuales.
+
+
+
 ### Hueco 1 · D1=0 — "el agente es un script determinístico sin modelo de lenguaje"
 
 **Importa, y más de lo que parece.** El nivel 0 de D1 tiene dos ramas: sin contrato escrito (banal,

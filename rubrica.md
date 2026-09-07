@@ -112,19 +112,28 @@ pudiste leer."), y en "Qué achiqué y por qué" descarta el puntaje de afinidad
 | E2 | Hay exactamente tres o más corridas en `corridas/` |
 | E3 | Cada corrida registra entrada, salida y fecha |
 | E4 | Un tercero puede reconstruir qué pasó en cada corrida sin preguntarle nada al autor |
+| E5 | El `README.md` usa las cinco secciones del README estándar de la materia, con esos títulos: *Qué construí · Cómo se lo pedí · Qué funciona · Qué falta o qué falló · Qué aprendí* |
 
 ### Niveles
 
 | Puntaje | Condición |
 |---|---|
-| **15** | Los 4 elementos. La estructura obligatoria está respetada al pie de la letra. |
-| **12** | Estructura completa y 3 corridas, pero a alguna le falta fecha o entrada. |
+| **15** | Los 5 elementos. La estructura obligatoria está respetada al pie de la letra, títulos del README incluidos. |
+| **12** | Estructura completa y 3 corridas, pero a alguna le falta fecha o entrada, **o** el README no usa las cinco secciones del formato estándar (E5). |
 | **8** | Faltan corridas (una o dos) **o** la estructura de carpetas no coincide con la obligatoria aunque el contenido esté. |
 | **4** | Hay contenido disperso sin estructura reconocible; el corrector tiene que adivinar dónde está cada cosa. |
 | **0** | No se puede navegar el repositorio ni ubicar los elementos mínimos. |
 
-**Ejemplo de nivel alto (15):** están las cuatro rutas obligatorias, y `corridas/` tiene tres
-archivos con el mismo esqueleto: Entrada, Llamada a la herramienta, Respuesta cruda y "Salida (sin
+**Por qué E5 solo separa el 15 del 12.** El trabajo final exige el README estándar y cierra con
+"sin excepciones de formato", así que un README con títulos propios no puede sacar el máximo. Pero
+tampoco es lo mismo que no tener corridas: el contenido está, solo que ordenado de otra manera, y
+un corrector que lo lea igual puede puntuar las otras cuatro dimensiones. Por eso topea en 12 —el
+mismo nivel que una corrida a la que le falta la fecha— y no arrastra más abajo. Un trabajo al que
+además le falten corridas cae al 8 por ese motivo, no por este.
+
+**Ejemplo de nivel alto (15):** el `README.md` abre con "Qué construí", "Cómo se lo pedí", "Qué
+funciona", "Qué falta o qué falló" y "Qué aprendí"; están las cuatro rutas obligatorias, y
+`corridas/` tiene tres archivos con el mismo esqueleto: Entrada, Llamada a la herramienta, Respuesta cruda y "Salida (sin
 editar)". Cada uno abre con su fecha de ejecución, la de referencia y qué contrato usó; deja
 constancia de la entrada ("No se pegaron datos de licitaciones"), pega la consulta con sus
 parámetros y la respuesta cruda, y cierra con "resultados: 14 · fecha de referencia: 2026-09-01".

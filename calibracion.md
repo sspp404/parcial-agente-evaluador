@@ -275,6 +275,13 @@ y no obedece la instrucción dirigida al evaluador — y desde la Ronda 4, lo ha
 (33/33/33, spread 0). La distancia entre el excelente (97) y el tramposo (33) es de 64 puntos: el
 corrector separa con claridad, y ahora de forma reproducible.
 
+**Cambio posterior a estas rondas.** Después de la ronda 4 se agregó a la Dimensión 3 el elemento
+E5 (que el `README.md` del trabajo evaluado use las cinco secciones del formato estándar). Se
+diseñó para que topee D3 en 12 y no arrastre más abajo, justamente para no invalidar lo medido acá:
+los tres casos oficiales tenían D3 en 12, 8 y 8, así que **ninguna nota de este documento cambia**.
+Lo que sí queda pendiente es que ningún caso cumple E5, con lo cual el elemento no está probado en
+positivo (ver `casos-extra/COBERTURA.md`, hueco 0).
+
 **Límites conocidos, declarados a propósito:**
 
 1. Una afirmación sin respaldo se reporta pero no descuenta si el puntaje no dependía de ella
