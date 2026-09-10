@@ -43,6 +43,7 @@ casos/flojo/       — caso de prueba 2: asistente de recetas
 casos/tramposo/    — caso de prueba 3: "SentimentOps™" de análisis de reseñas
 calibracion.md     — desacuerdos encontrados, ajustes hechos, resultado
 PRUEBA_DE_FUEGO.md — cómo se opera el corrector en vivo: los dos caminos y los modos de falla
+corrector.html    — el corrector en un archivo: doble clic, sin Python ni servidor
 correcciones/      — las salidas crudas del corrector: los seis casos y los repos reales
 casos-extra/       — casos adicionales que cubren las banderas que los tres oficiales no ejercitan
 panel-evaluador/   — opcional: la app que usamos para operar el corrector (ver su propio README)
@@ -99,7 +100,14 @@ cambio— están documentadas ronda por ronda en [`calibracion.md`](calibracion.
 4. El agente lista los archivos, lee README, DECISIONES, `prompts/` y `corridas/`, y devuelve la
    corrección en el formato fijo.
 
-Con el panel instalado, los cuatro pasos son un comando —
+**Sin instalar nada:** abrí [`corrector.html`](corrector.html) en el navegador, pegá la URL del
+repositorio y tu API key de Anthropic, y listo. Es un solo archivo: lee el repositorio con la API
+pública de GitHub, corre el escaneo forense y las métricas de `git` en el propio navegador, arma
+el mismo envío que el pipeline y llama a la API. Baja la rúbrica y el system prompt de este repo,
+así que siempre corrige con la versión vigente. La key no se guarda: vive en memoria mientras la
+pestaña está abierta.
+
+Con el panel de Python instalado, los cuatro pasos son un comando —
 `python3 panel-evaluador/server/correr_repo.py <url-del-repo> --fecha 2026-09-10` — que clona el
 repositorio con su historial completo, lo corrige y guarda la salida cruda. El manual de operación
 de la prueba de fuego, con los dos caminos y qué hacer cuando algo falla, está en

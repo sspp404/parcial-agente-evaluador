@@ -48,6 +48,28 @@ carpeta es la evidencia: si no quedó archivo, la corrección no ocurrió.
 al modelo entre 60 y 170 s, mediana 94 s sobre las 18 corridas de la Ronda 5. Total: **unos dos
 minutos**, casi todo esperando al modelo.
 
+## Camino A-bis · el archivo HTML (≈ 2 minutos, sin Python)
+
+Doble clic en [`corrector.html`](corrector.html). Pegás la URL del repositorio, la fecha y tu API
+key, y apretás **Corregir**. Hace exactamente lo mismo que `correr_repo.py` —mismo recorte, mismo
+escaneo forense, mismas métricas de git, mismo prompt— pero leyendo el repositorio con la API
+pública de GitHub en vez de clonarlo, así que no necesita ni Python ni `git`.
+
+Es el camino más robusto para la noche: no depende de que Python tenga certificados, ni de Doppler,
+ni de que el `pip install` de `certifi` haya corrido. Si la máquina abre un navegador, corrige.
+
+Dos límites que conviene saber antes de usarlo en vivo:
+
+- **La key queda en el navegador.** No se guarda en disco ni en `localStorage`, pero está en la
+  memoria de la pestaña. Usá una key con límite de gasto y cerrá la pestaña al terminar.
+- **La API pública de GitHub permite 60 consultas por hora sin autenticar.** El corrector usa dos
+  por repositorio (árbol y commits); el contenido de los archivos lo baja de
+  `raw.githubusercontent.com`, que no cuenta contra ese límite. Alcanza de sobra para una noche,
+  pero si aparece un `403`, es eso.
+
+La salida se descarga con la misma cabecera que escribe `correr_repo.py`, así que se guarda en
+`correcciones/` igual que cualquier otra corrida.
+
 ## Camino B · sin instalar nada, sin API key (≈ 4 minutos)
 
 Funciona en cualquier chat con un modelo capaz, y es el camino que también puede repetir el
