@@ -42,6 +42,9 @@
   .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
   .note{border-left:3px solid var(--warn);padding:9px 13px;background:var(--code);border-radius:0 7px 7px 0;font-size:13px;margin-bottom:16px}
   code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.9em}
+  #err{display:none;border-left:3px solid var(--bad);background:var(--code);color:var(--bad);
+       padding:11px 14px;border-radius:0 7px 7px 0;font-size:14px;font-weight:600;margin:14px 0 0}
+  #run{display:none;color:var(--muted);font-size:13px;margin-top:12px}
 </style>
 </head>
 <body>
@@ -85,8 +88,10 @@
     </div>
     <button id="go">Corregir</button>
     <button id="dl" class="sec" hidden>Descargar salida cruda</button>
+    <div id="err"></div>
+    <div id="run">Corrigiendo… puede tardar dos minutos. El detalle va apareciendo abajo.</div>
     <div id="stat" class="stat"></div>
-    <details><summary>Detalle de la corrida</summary><div id="log">esperando…</div></details>
+    <details id="det"><summary>Detalle de la corrida</summary><div id="log">esperando…</div></details>
   </div>
 
   <div class="panel" id="outwrap" hidden><div id="out"></div></div>
@@ -222,10 +227,12 @@ const raw = async (o,r,b,p) => {
 $("go").onclick = async () => {
   const btn = $("go"); btn.disabled = true;
   $("log").textContent = ""; $("stat").textContent = ""; $("outwrap").hidden = true; $("dl").hidden = true;
+  $("err").style.display = "none"; $("run").style.display = "block"; $("det").open = true;
   const t0 = performance.now();
   try{
+    if (!$("repo").value.trim()){ $("repo").focus(); throw new Error("Falta la URL del repositorio a corregir."); }
     const key = $("key").value.trim();
-    if (!key) throw new Error("Falta la API key.");
+    if (!key){ $("key").focus(); throw new Error("Falta la API key de Anthropic."); }
     const fecha = $("fecha").value;
     const {owner,repo} = parseRepo($("repo").value);
     log(`Repositorio: ${owner}/${repo}`);
@@ -402,8 +409,14 @@ Corregí este trabajo aplicando la rúbrica completa. Devolvé la corrección en
       a.click();
     };
   }catch(e){
+    // Un fallo que solo se escribe en un <details> cerrado es un fallo
+    // invisible: en vivo se lee como "aprieto y no pasa nada".
     log(e.message, "bad");
+    const err = $("err");
+    err.textContent = "✗ " + e.message;
+    err.style.display = "block";
   }finally{
+    $("run").style.display = "none";
     btn.disabled = false;
   }
 };
