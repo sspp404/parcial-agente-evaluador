@@ -139,12 +139,15 @@ tres veces y las tres dieron el mismo número.
 
 **Estas tres notas se midieron contra la rúbrica de la Ronda 5, no contra la actual.** El
 2026-09-10 la rúbrica cambió cuatro veces —las anclas de archivo en D1 y D2, el contenido de
-`prompts/` en D3/E1, y la fila de B6—, y los tres casos oficiales **no se volvieron a correr**
-contra esa versión. Ninguno de los cambios debería moverlos: tres son aclaraciones que solo pueden
-evitar falsos negativos, y el de D3/E1 no aplica a casos que ya puntúan por debajo de ese nivel.
-Pero *no debería* no es *se midió*, y es exactamente la distinción que este agente le exige a cada
-trabajo que corrige. Está declarado en [`calibracion.md`](calibracion.md), Ronda 6, junto con lo
-que esa ronda sí midió: cuatro repositorios reales que no escribimos nosotros.
+`prompts/` en D3/E1, y la fila de B6. Se verificó **cambio por cambio, contra los archivos de los
+tres casos**, si alguno podía mover un nivel: ninguno lo mueve, y las quince celdas del desglose
+por dimensión se reconstruyen idénticas. El detalle está en [`calibracion.md`](calibracion.md),
+*Verificación diferencial de los cuatro cambios*.
+
+Eso es una prueba diferencial sobre el texto de la rúbrica, **no una re-medición**: no vuelve a
+correr el modelo, así que no descarta una interacción que no hayamos anticipado — como la que la
+Ronda 5 encontró cuando E5 y B2a se apilaron sobre D3 y bajaron el excelente de 97 a 93. La prueba
+fuerte es correr `calibrar.py 3` contra la rúbrica actual, y **sigue pendiente**.
 
 **El excelente bajó de 97 a 93** al agregar el elemento E5 a la Dimensión 3: su README no usa los
 cinco títulos estándar, lo que topea D3 en 12, y la bandera B2a por una fecha inconsistente baja un

@@ -511,3 +511,41 @@ costando en la Dimensión 3.
 - **No corrigió el trabajo final real con permiso de su autora**, así que esa corrección no se
   publica en este repositorio: se describe acá el hallazgo que produjo, no su nota por trabajo
   identificable.
+
+### Verificación diferencial de los cuatro cambios (2026-09-10)
+
+La Ronda 6 dejó abierto que los **93 / 44 / 33** se habían medido contra la rúbrica anterior. Esto
+lo cierra, aunque no de la forma más fuerte posible: en vez de volver a correr el pipeline, se
+verificó **cambio por cambio, contra los archivos de cada caso**, si alguno podía mover un nivel.
+Es una prueba diferencial, no una re-medición.
+
+Fecha de corrección usada: **2026-09-02**, la misma de la Ronda 5 — importa, porque la bandera B2a
+del caso excelente depende de que `corridas/corrida_3.md` declare una fecha de ejecución posterior
+a ella.
+
+| Cambio | A quién podía tocar | Qué se verificó | Resultado |
+|---|---|---|---|
+| **D1 · E4 y E5 dejan de exigir `README.md`** | Solo puede **subir** notas, nunca bajarlas | `excelente` ya tenía L0–L4 y objetivo en el README y está en 30/30, su techo. En `flojo` y `tramposo` se buscó L0–L4 en los cuatro archivos de cada uno: no está en ninguno | Sin cambio |
+| **D3 · E1 exige `system_prompt.md` y `user_prompt.md`** | Solo puede **bajar** notas | `excelente` tiene los dos → sigue cumpliendo. `flojo` (8) y `tramposo` (4) tienen solo `system_prompt.md`, pero el criterio nuevo topea en **12** y los dos ya puntúan por debajo de ese nivel por otro motivo: les faltan corridas | Sin cambio |
+| **B6 · exige afirmación explícita** | Solo puede **evitar** que la bandera se dispare | Ninguno de los tres casos oficiales trae historial de `git` (`gitLog` = no disponible), así que B6 nunca se evaluaba sobre ellos | Sin cambio |
+| **D2 · las anclas y el tope duro** | Solo puede **subir** notas | Los tres documentan su proceso en `DECISIONES.md`, que es donde la rúbrica ya lo buscaba. El tope duro reformulado ("ningún archivo cita una falla textual") sigue aplicando a `tramposo`, cuyos cuatro archivos narran en abstracto | Sin cambio |
+
+**Las tres notas se sostienen: 93 / 44 / 33.** El desglose por dimensión de la Ronda 5 se
+reconstruyó contra la rúbrica actual y coincide en las quince celdas:
+
+| Caso | D1 | D2 | D3 | D4 | D5 | Total |
+|---|---|---|---|---|---|---|
+| excelente | 30 | 25 | 8 | 15 | 15 | **93** |
+| flojo | 10 | 14 | 8 | 4 | 8 | **44** |
+| tramposo | 10 | 7 | 4 | 4 | 8 | **33** |
+
+De paso quedó explicada una asimetría de la Ronda 5 que el documento no había desarmado: el
+`tramposo` saca 7 en D2 y 4 en D3 —un nivel por debajo de lo que sus elementos indicarían por sí
+solos— porque la bandera **B2b** manda las dos dimensiones al nivel inferior. La rúbrica lo dice
+en la fila de B2b; ahora está dicho también acá, con los números al lado.
+
+**Qué NO prueba esta verificación.** No vuelve a medir la varianza del modelo: una prueba
+diferencial confirma que el texto de la rúbrica no cambia el nivel de estos tres casos, no que el
+corrector responda igual. Las interacciones que no anticipamos —como la que la Ronda 5 encontró
+cuando E5 y B2a se apilaron sobre D3 y bajaron el excelente de 97 a 93— solo aparecen corriendo.
+Correr `calibrar.py 3` contra la rúbrica actual sigue siendo la prueba fuerte, y sigue pendiente.
