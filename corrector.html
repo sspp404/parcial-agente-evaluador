@@ -233,6 +233,19 @@ $("go").onclick = async () => {
     if (!$("repo").value.trim()){ $("repo").focus(); throw new Error("Falta la URL del repositorio a corregir."); }
     const key = $("key").value.trim();
     if (!key){ $("key").focus(); throw new Error("Falta la API key de Anthropic."); }
+    // Un 401 de Anthropic no dice QUÉ pegaste. Los dos errores que de verdad
+    // pasan son pegar el token de Doppler (que es lo que usa el panel de
+    // Python) y pegar una key cortada. Los dos se detectan sin gastar la
+    // llamada, y el mensaje dice qué hacer en vez de "invalid x-api-key".
+    if (key.startsWith("dp.")){
+      $("key").focus();
+      throw new Error("Eso es un token de Doppler, no una API key de Anthropic. Doppler solo sirve para el panel de Python: guarda la key, no es la key. Entrá a console.anthropic.com → Settings → API Keys y pegá acá la que empieza con sk-ant-");
+    }
+    if (!key.startsWith("sk-ant-")){
+      $("key").focus();
+      throw new Error(`Una API key de Anthropic empieza con "sk-ant-" y la que pegaste empieza con "${key.slice(0,7)}…". Sacala de console.anthropic.com → Settings → API Keys.`);
+    }
+    if (key.length < 90) log(`La key tiene ${key.length} caracteres y las de Anthropic suelen tener ~108: si falla con 401, revisá que la copiaste entera.`, "warn");
     const fecha = $("fecha").value;
     const {owner,repo} = parseRepo($("repo").value);
     log(`Repositorio: ${owner}/${repo}`);
