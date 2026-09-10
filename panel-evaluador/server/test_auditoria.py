@@ -10,6 +10,7 @@ API): esto verifica el arnés, que es donde estaban los bugs que hacían que el
 corrector acusara a inocentes o corrigiera a ciegas.
 """
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -391,6 +392,36 @@ def test_import_de_backup_no_inyecta():
           c["fecha"] == "" and c["total"] is None and c["veredicto"] == "bad" and c["banderas"] == ["B1"], str(c))
 
 
+def test_documentacion_partida_en_la_raiz_llega_al_corrector():
+    """Un ensayo de la prueba de fuego contra un trabajo ajeno encontró que
+    partir el README en `analisis_economico.md` y `gobierno_riesgos.md` hacía
+    que el corrector no recibiera ni una línea de las Dimensiones 4 y 5 —30 de
+    los 100 puntos— sobre un trabajo que las tenía completas. Tampoco entraban
+    en `omitidos`, así que el corrector no podía siquiera declarar que le
+    faltaban. El andamiaje de nuestros propios casos (TRAMPAS.md) sigue sin
+    enviarse: sería darle las respuestas del examen que le estamos tomando."""
+    print("\nDump · la documentación partida en archivos de la raíz")
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp) / "trabajo"
+        (base / "prompts").mkdir(parents=True)
+        (base / "corridas").mkdir(parents=True)
+        (base / "README.md").write_text("# Trabajo\n", encoding="utf-8")
+        (base / "DECISIONES.md").write_text("# Decisiones\n", encoding="utf-8")
+        (base / "analisis_economico.md").write_text("1368 tokens de entrada\n", encoding="utf-8")
+        (base / "gobierno_riesgos.md").write_text("firma el responsable de compras\n", encoding="utf-8")
+        (base / "TRAMPAS.md").write_text("aca estan las cuatro trampas\n", encoding="utf-8")
+        (base / "prompts" / "system_prompt.md").write_text("rol\n", encoding="utf-8")
+        (base / "corridas" / "corrida_1.md").write_text("entrada\n", encoding="utf-8")
+        dump = corrector.construir_dump(str(base), Path(tmp))
+        enviados = re.findall(r"<<<ARCHIVO (\S+) ", dump["text"])
+        check("analisis_economico.md llega al corrector",
+              "analisis_economico.md" in enviados, f"enviados: {enviados}")
+        check("gobierno_riesgos.md llega al corrector",
+              "gobierno_riesgos.md" in enviados, f"enviados: {enviados}")
+        check("TRAMPAS.md no llega: es andamiaje nuestro, no del trabajo",
+              "TRAMPAS.md" not in enviados, f"enviados: {enviados}")
+
+
 if __name__ == "__main__":
     for t in (test_b6_no_se_fabrica_con_clon_superficial, test_b6_informa_la_divergencia_sin_acusar,
               test_el_recorte_no_saltea_el_escaneo, test_forense_distingue_ataque_de_notacion,
@@ -398,7 +429,8 @@ if __name__ == "__main__":
               test_parser_tolera_el_formato_del_modelo, test_casos_extra_ejercitan_lo_que_prometen,
               test_caso_b6_materializa_su_historial, test_raiz_no_confunde_un_caso_de_ejemplo_con_la_entrega,
               test_escaneo_forense_cubre_lo_que_no_se_envia, test_metadatos_de_git_no_se_inyectan,
-              test_parser_no_se_deja_secuestrar, test_import_de_backup_no_inyecta):
+              test_parser_no_se_deja_secuestrar, test_import_de_backup_no_inyecta,
+              test_documentacion_partida_en_la_raiz_llega_al_corrector):
         t()
     print()
     if fallas:

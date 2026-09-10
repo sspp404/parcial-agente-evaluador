@@ -29,6 +29,14 @@ MAX_DUMP_TOTAL = 400_000    # caracteres
 # por eso el contenido se limita a estas rutas, aunque el LISTADO de archivos
 # (más abajo) sigue mostrando el repositorio completo.
 ARCHIVOS_RAIZ_REQUERIDOS = {"readme.md", "decisiones.md"}
+
+# Archivos que documentan un caso de prueba PARA NOSOTROS y no forman parte del
+# trabajo simulado: `TRAMPAS.md` enumera los cuatro vectores de ocultamiento de
+# `casos-extra/oculto`, `QUE_PRUEBA.md` explica qué nivel de la rúbrica ejercita
+# cada caso. Mandárselos al corrector sería darle las respuestas del examen que
+# le estamos tomando: detectaría B4 leyendo la lista de trampas en vez de
+# encontrarlas. Un repositorio real de un alumno no tiene ninguno de estos.
+ARCHIVOS_DE_ANDAMIAJE = {"trampas.md", "que_prueba.md", "cobertura.md"}
 CARPETAS_REQUERIDAS = {"prompts", "corridas"}
 
 # Carpetas que contienen trabajos de EJEMPLO, no la entrega. Un repositorio que
@@ -107,6 +115,26 @@ def detectar_raiz_entrega(rutas: list[str]) -> str:
 
 
 def _es_contenido_requerido(rel_posix: str, raiz: str = "") -> bool:
+    """Qué contenido se le envía al corrector.
+
+    Además de los cuatro elementos obligatorios, se envía **cualquier `.md` de
+    la raíz de la entrega**. El motivo lo encontró un ensayo de la prueba de
+    fuego contra un trabajo ajeno: partía su documentación en
+    `analisis_economico.md` y `gobierno_riesgos.md` al lado del README, y como
+    ninguno de los dos se llama README.md ni cuelga de `prompts/` o `corridas/`,
+    el corrector no recibía ni una línea de ellos. Son la evidencia entera de
+    las Dimensiones 4 y 5 —30 de los 100 puntos— y el trabajo las tenía
+    completas: tokens discriminados por corrida, tarifa con fuente, proyección
+    con supuestos, tabla de fallas con quién firma.
+
+    Peor: tampoco entraban en `omitidos`, porque ese aviso solo cubre archivos
+    que se LLAMAN como los obligatorios. El corrector los veía en el listado y
+    nada más, así que la única salida honesta que le quedaba era R3 —evidencia
+    insuficiente— sobre un trabajo que sí la tenía. Partir el README en
+    archivos temáticos no viola ninguna regla de la consigna.
+
+    El listado sigue mostrando el repositorio completo, y el tope de
+    `MAX_DUMP_TOTAL` sigue acotando cuánto entra."""
     pref = (raiz + "/") if raiz else ""
     if pref:
         if not rel_posix.startswith(pref):
@@ -114,7 +142,9 @@ def _es_contenido_requerido(rel_posix: str, raiz: str = "") -> bool:
         rel_posix = rel_posix[len(pref):]
     partes = rel_posix.lower().split("/")
     if len(partes) == 1:
-        return partes[0] in ARCHIVOS_RAIZ_REQUERIDOS
+        if partes[0] in ARCHIVOS_DE_ANDAMIAJE:
+            return False
+        return partes[0] in ARCHIVOS_RAIZ_REQUERIDOS or partes[0].endswith(".md")
     return partes[0] in CARPETAS_REQUERIDAS
 
 
