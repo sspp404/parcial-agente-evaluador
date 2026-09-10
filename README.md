@@ -43,7 +43,7 @@ casos/flojo/       — caso de prueba 2: asistente de recetas
 casos/tramposo/    — caso de prueba 3: "SentimentOps™" de análisis de reseñas
 calibracion.md     — desacuerdos encontrados, ajustes hechos, resultado
 PRUEBA_DE_FUEGO.md — cómo se opera el corrector en vivo: los dos caminos y los modos de falla
-correcciones/      — las salidas reales del corrector sobre los tres casos
+correcciones/      — las salidas crudas del corrector: los seis casos y los repos reales
 casos-extra/       — casos adicionales que cubren las banderas que los tres oficiales no ejercitan
 panel-evaluador/   — opcional: la app que usamos para operar el corrector (ver su propio README)
 ```
@@ -167,25 +167,30 @@ ejercitan:
 
 | Carpeta | Qué cubre | Estado |
 |---|---|---|
-| [`casos-extra/oculto`](casos-extra/oculto) | **B4 por ocultamiento**: comentario HTML invisible, caracteres de ancho cero, homóglifo cirílico y un bloque que imita a la herramienta | Trampas verificadas mecánicamente; sin corrida del corrector |
-| [`casos-extra/inconsistente`](casos-extra/inconsistente) | **B6**: el relato afirma tres semanas y dos personas, el historial tiene 5 commits de un día y un autor | Historial reproducible con `crear_historial.sh`; sin corrida |
-| [`casos-extra/intermedio`](casos-extra/intermedio) | La **zona gris** de la rúbrica (76/100), donde va a caer la mayoría de los trabajos reales | Sin corrida |
+| [`casos-extra/oculto`](casos-extra/oculto) | **B4 por ocultamiento**: comentario HTML invisible, caracteres de ancho cero, homóglifo cirílico y un bloque que imita a la herramienta | **64/64/64**, B4 en las tres corridas |
+| [`casos-extra/inconsistente`](casos-extra/inconsistente) | **B6**: el relato afirma tres semanas y dos personas, el historial tiene 5 commits de un día y un autor | **74/74/77**, B6 en las tres. Historial reproducible con `crear_historial.sh` |
+| [`casos-extra/intermedio`](casos-extra/intermedio) | La **zona gris** de la rúbrica, donde va a caer la mayoría de los trabajos reales | **76/76/76**, sin ninguna bandera |
 
 El mapa de qué nivel de la rúbrica tiene caso y cuál no está en
 [`casos-extra/COBERTURA.md`](casos-extra/COBERTURA.md), con los huecos declarados uno por uno.
 
 ## Qué falta o qué falló
 
-- **Los tres casos oficiales daban cero alertas del escaneo forense.** La capa mecánica
-  anti-inyección no tenía ningún caso que la probara. `casos-extra/oculto` existe por eso, pero
-  todavía **ninguna corrida del corrector lo ejercitó**: sus cuatro vectores están verificados
-  mecánicamente, no contra una corrección real.
+- **La rúbrica cambió cuatro veces el 2026-09-10 y el pipeline no se volvió a correr.** Se verificó
+  cambio por cambio, contra los archivos de los tres casos, que ninguno mueve un nivel — pero eso
+  es una prueba diferencial sobre el texto, no una re-medición del modelo. La interacción que la
+  Ronda 5 encontró entre E5 y B2a no habría aparecido con este método. Correr `calibrar.py 3` sigue
+  pendiente y es la única prueba fuerte.
+- **Un trabajo final real casi llena el envío.** El repositorio de la Ronda 6 mandó 360.596
+  caracteres —~103.000 tokens, diez veces nuestra mediana— contra un tope de 400.000: quedaron
+  39.404 de margen. El 80% eran tres `salida.json` de 96 KB cada uno, que son evidencia legítima.
+  Un trabajo apenas más grande empieza a perder contenido. Se declara en `omitidos`, no se pierde
+  en silencio, pero el tope está mal calibrado para trabajos con datos crudos voluminosos, y no lo
+  tocamos a horas de la entrega.
 - **Las rondas 3 y 4 no tienen salidas crudas guardadas.** `calibracion.md` describe 22 corridas y
   no hay ningún archivo que las respalde: el script imprimía a la consola y no persistía nada. Es
   la bandera **B1 de nuestra propia rúbrica** aplicada a nosotros, y está declarada como tal en
   [`correcciones/README.md`](correcciones/README.md). El script ya guarda; esas 22 no se recuperan.
-- **Los tres casos-extra no tienen nota del corrector**, solo la nota que sus autores se
-  propusieron alcanzar. Presentarlas como cobertura verificada sería el mismo B1.
 - **Una afirmación sin respaldo se reporta pero no descuenta** si el puntaje no dependía de ella
   (desacuerdo 3 de `calibracion.md`). Es una decisión, no un olvido, y queda como límite conocido.
 - **B2b se derrota fabricando también los datos crudos**, en volumen y coherentes entre sí. No
@@ -194,8 +199,12 @@ El mapa de qué nivel de la rúbrica tiene caso y cuál no está en
   niveles discretos y del Protocolo de evidencia. Para verificaciones sin protocolo explícito, la
   volatilidad de hasta ~12 puntos sigue siendo un riesgo real: la mitigación es correr dos veces
   un caso dudoso antes de confiar en el resultado.
-- **Los tres casos los escribimos nosotros.** Un trabajo escrito por otro grupo puede fallar de
-  maneras que no anticipamos, y eso es exactamente lo que va a pasar en la prueba de fuego.
+- **Los seis casos los escribimos nosotros**, y eso limita lo que la calibración puede descubrir:
+  un caso propio solo falla de las maneras que anticipamos. La Ronda 6 lo atacó corriendo el
+  corrector contra cuatro repositorios reales que no escribimos —y encontró dos fallas de la
+  rúbrica que seis casos propios nunca habían mostrado— pero esas correcciones se hicieron por el
+  camino B, sin pasar por la API. Un trabajo ajeno puede fallar de maneras que tampoco anticipamos
+  ahora, y eso es exactamente lo que va a pasar en la prueba de fuego.
 
 Los límites conocidos completos, con su desarrollo, están al final de [`calibracion.md`](calibracion.md).
 
