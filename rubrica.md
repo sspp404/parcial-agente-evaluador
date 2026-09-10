@@ -42,8 +42,17 @@ la bandera toca varias, se aplica únicamente a la de mayor peso.
 | E1 | Contrato escrito con las seis piezas identificables (Rol, Contexto, Tarea, Restricciones, Formato, Ejemplos) | `prompts/system_prompt.md` + `prompts/user_prompt.md` |
 | E2 | Al menos una herramienta o conector **real** efectivamente invocado, con registro de la llamada (qué herramienta, qué consulta/parámetros, qué devolvió) | `corridas/` o archivo de registro de herramienta |
 | E3 | Salida en formato estructurado y **consistente** entre las tres corridas | `corridas/` |
-| E4 | Puntos de supervisión humana definidos con el vocabulario L0–L4: qué hace solo, qué revisa una persona, quién firma | `README.md` |
-| E5 | Objetivo del sistema declarado explícitamente en una o dos frases | `README.md` |
+| E4 | Puntos de supervisión humana definidos con el vocabulario L0–L4: qué hace solo, qué revisa una persona, quién firma | `README.md`, o donde el trabajo lo documente |
+| E5 | Objetivo del sistema declarado explícitamente en una o dos frases | `README.md`, o donde el trabajo lo documente |
+
+**La columna «dónde se verifica» es dónde suele estar, no un requisito.** El trabajo final
+exige el objetivo y la supervisión L0–L4; no dice en qué archivo tienen que vivir. Un trabajo
+que define quién firma en `DECISIONES.md`, o la supervisión adentro del propio system prompt,
+cumple E4 y E5 igual: se busca la evidencia en todo el material recibido y se cita la ruta donde
+apareció. Bajar un elemento por estar en el archivo "equivocado" sería puntuar la ubicación en
+vez de la evidencia — y eso ya lo mide la Dimensión 3, que es donde el formato pesa.
+*(Aclaración incorporada tras contrastar la rúbrica contra `trabajo-final.md` — ver
+`calibracion.md`, Ronda 6.)*
 
 ### Niveles
 
@@ -108,7 +117,7 @@ pudiste leer."), y en "Qué achiqué y por qué" descarta el puntaje de afinidad
 
 | # | Elemento |
 |---|---|
-| E1 | Existen los cuatro elementos obligatorios: `README.md`, `prompts/`, `corridas/`, `DECISIONES.md` |
+| E1 | Existen los cuatro elementos obligatorios: `README.md`, `prompts/`, `corridas/`, `DECISIONES.md`, y `prompts/` contiene los dos archivos que la estructura nombra: `system_prompt.md` y `user_prompt.md` (más las variantes, si las hay) |
 | E2 | Hay exactamente tres o más corridas en `corridas/` |
 | E3 | Cada corrida registra entrada, salida y fecha |
 | E4 | Un tercero puede reconstruir qué pasó en cada corrida sin preguntarle nada al autor |
@@ -119,7 +128,7 @@ pudiste leer."), y en "Qué achiqué y por qué" descarta el puntaje de afinidad
 | Puntaje | Condición |
 |---|---|
 | **15** | Los 5 elementos. La estructura obligatoria está respetada al pie de la letra, títulos del README incluidos. |
-| **12** | Estructura completa y 3 corridas, pero a alguna le falta fecha o entrada, **o** el README no usa las cinco secciones del formato estándar (E5). |
+| **12** | Estructura completa y 3 corridas, pero a alguna le falta fecha o entrada, **o** el README no usa las cinco secciones del formato estándar (E5), **o** en `prompts/` falta uno de los dos archivos que la estructura nombra. |
 | **8** | Faltan corridas (una o dos) **o** la estructura de carpetas no coincide con la obligatoria aunque el contenido esté. |
 | **4** | Hay contenido disperso sin estructura reconocible; el corrector tiene que adivinar dónde está cada cosa. |
 | **0** | No se puede navegar el repositorio ni ubicar los elementos mínimos. |
@@ -130,6 +139,12 @@ tampoco es lo mismo que no tener corridas: el contenido está, solo que ordenado
 un corrector que lo lea igual puede puntuar las otras cuatro dimensiones. Por eso topea en 12 —el
 mismo nivel que una corrida a la que le falta la fecha— y no arrastra más abajo. Un trabajo al que
 además le falten corridas cae al 8 por ese motivo, no por este.
+
+**Y por qué E1 nombra los archivos de `prompts/`.** La estructura obligatoria del trabajo final no
+dice "una carpeta `prompts/`": dice `system_prompt.md, user_prompt.md (y variantes si las hay)`.
+Un trabajo con un único `prompts/todo.md` tiene el contrato —eso lo puntúa D1/E1— pero no respetó
+la estructura, que es exactamente lo que mide esta dimensión. Cuesta un nivel, el mismo que una
+corrida sin fecha, y por la misma razón: el contenido está, el formato no.
 
 **Ejemplo de nivel alto (15):** el `README.md` abre con "Qué construí", "Cómo se lo pedí", "Qué
 funciona", "Qué falta o qué falló" y "Qué aprendí"; están las cuatro rutas obligatorias, y

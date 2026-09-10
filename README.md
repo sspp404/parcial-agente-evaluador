@@ -42,6 +42,7 @@ casos/excelente/   — caso de prueba 1: alertas de licitaciones públicas
 casos/flojo/       — caso de prueba 2: asistente de recetas
 casos/tramposo/    — caso de prueba 3: "SentimentOps™" de análisis de reseñas
 calibracion.md     — desacuerdos encontrados, ajustes hechos, resultado
+PRUEBA_DE_FUEGO.md — cómo se opera el corrector en vivo: los dos caminos y los modos de falla
 correcciones/      — las salidas reales del corrector sobre los tres casos
 casos-extra/       — casos adicionales que cubren las banderas que los tres oficiales no ejercitan
 panel-evaluador/   — opcional: la app que usamos para operar el corrector (ver su propio README)
@@ -98,8 +99,17 @@ cambio— están documentadas ronda por ronda en [`calibracion.md`](calibracion.
 4. El agente lista los archivos, lee README, DECISIONES, `prompts/` y `corridas/`, y devuelve la
    corrección en el formato fijo.
 
-Detalle de herramienta, permisos, elección de modelo, supervisión L0–L4 y determinismo:
-[`agente/configuracion.md`](agente/configuracion.md).
+Con el panel instalado, los cuatro pasos son un comando —
+`python3 panel-evaluador/server/correr_repo.py <url-del-repo> --fecha 2026-09-10` — que clona el
+repositorio con su historial completo, lo corrige y guarda la salida cruda. El manual de operación
+de la prueba de fuego, con los dos caminos y qué hacer cuando algo falla, está en
+[`PRUEBA_DE_FUEGO.md`](PRUEBA_DE_FUEGO.md).
+
+**Qué cuesta.** Una corrección son USD 0,115 (mediana real de las 18 corridas de la Ronda 5:
+10.585 tokens de entrada, 11.850 leídos de caché, 9.119 de salida, a precios de `claude-sonnet-5`).
+Corregir los ~50 trabajos finales de la materia costaría USD 5,73. El desglose y la proyección
+están en [`agente/configuracion.md`](agente/configuracion.md), junto al detalle de herramienta,
+permisos, elección de modelo, supervisión L0–L4 y determinismo.
 
 **Los tres casos de prueba** son repositorios completos de trabajos finales ficticios, de dominios
 distintos a propósito, para que el corrector no dependa del tema:

@@ -48,9 +48,61 @@ Si el paso 1 o 2 falla, el agente reporta la falla y **no puntúa**.
 Criterio del curso: el modelo más chico que hace bien la tarea. La corrección exige lectura
 de varios archivos largos, comparación contra una rúbrica de cinco dimensiones y detección de
 inconsistencias entre lo que un repositorio afirma y lo que contiene — es una tarea de
-razonamiento sobre contexto largo, no de generación. Se usa un modelo de gama media-alta con
-ventana de contexto amplia; un modelo chico falla sistemáticamente en la detección del caso
-tramposo (ver `calibracion.md`).
+razonamiento sobre contexto largo, no de generación. Se usa `claude-sonnet-5`: gama media, ventana
+de contexto amplia, y el modelo con el que se corrieron las 18 correcciones de la Ronda 5 que este
+repositorio guarda crudas.
+
+El razonamiento para no bajar de ahí es el peso de las dos verificaciones más caras de la rúbrica
+—el Protocolo de evidencia y la detección del caso tramposo—: son comparaciones entre lo que un
+repositorio afirma y lo que sus archivos sostienen, repartidas por varios documentos largos, que
+es justo donde un modelo chico se apoya en lo que el texto *parece* decir. Es un razonamiento, no
+una medición: ver *Qué NO medimos*, más abajo.
+
+## Costo de una corrección
+
+La Dimensión 4 de nuestra rúbrica le exige a cada trabajo el costo de una corrida con tokens
+discriminados, una proyección con el supuesto de frecuencia escrito y la elección de modelo
+justificada. Sería incoherente exigirlo y no declararlo, así que acá está el nuestro — y no es
+una estimación de escritorio: sale de las 18 corridas de la Ronda 5, cuyos tokens están anotados
+en la cabecera de cada archivo de [`correcciones/corrida_20260906-2238/`](../correcciones/corrida_20260906-2238/).
+
+**Precios de `claude-sonnet-5`** (API de Anthropic, USD por millón de tokens): entrada 2,00 ·
+salida 10,00 · escritura de caché 2,50 · lectura de caché 0,20.
+
+**Una corrección (valores medianos de las 18 corridas):**
+
+| Concepto | Tokens | Costo |
+|---|---|---|
+| Entrada nueva (el repositorio evaluado + el bloque forense) | 10.585 | USD 0,0212 |
+| Lectura de caché (system prompt + `rubrica.md`, idénticos en cada corrida) | 11.850 | USD 0,0024 |
+| Salida (la corrección completa) | 9.119 | USD 0,0912 |
+| **Total por corrección** | | **USD 0,115** |
+
+El rango real de las 18 fue de USD 0,065 (caso `flojo`, un repositorio chico) a USD 0,188 (caso
+`oculto`, el más largo). La primera corrección de cada sesión paga además la escritura del caché
+—11.850 tokens a 2,50, o sea USD 0,030— una sola vez: de ahí en adelante ese bloque se lee a una
+décima parte del precio. La Ronda 5 completa (18 correcciones, dos escrituras de caché) costó
+**USD 2,23**.
+
+**Proyección, con el supuesto explícito.** Si este agente gana la prueba de fuego, corrige todos
+los trabajos finales de la materia tras el cierre del domingo 13/9. Con ~50 trabajos y una
+corrección por trabajo: **USD 5,73**. Corriendo cada trabajo tres veces —lo que la propia rúbrica
+recomienda ante una nota dudosa, ver *Determinismo* más abajo—: **USD 17,18**. Es el orden de
+magnitud de un café: el costo no es la restricción de este sistema, y decirlo también es parte del
+análisis.
+
+**Dónde está el dinero, y qué palanca lo mueve.** El 80% del costo de una corrección son tokens de
+**salida**, no de entrada. La palanca no es recortar lo que se le manda al corrector sino cuánto
+escribe: una corrección con justificaciones citadas, banderas y sugerencia ronda los 9.000 tokens y
+es el producto, no un desperdicio. La entrada ya está acotada por el filtro del dump —solo
+`README.md`, `DECISIONES.md`, `prompts/` y `corridas/`, no el repositorio entero—, que es lo que
+mantiene los 10.000 tokens en vez de los 40.000 de un repo con código y assets.
+
+**Qué NO medimos.** No corrimos los casos contra otro modelo. La comparación honesta —el mismo caso
+contra un modelo más chico y uno más grande, con las notas al lado— cuesta unas dos horas y no la
+hicimos: la elección de `claude-sonnet-5` está razonada (abajo), no medida. Lo decimos acá porque
+la Dimensión 4 pide la elección *justificada*, y una justificación sin la corrida que la respalde
+es, con nuestra propia vara, evidencia insuficiente.
 
 ## Supervisión humana (L0–L4)
 
