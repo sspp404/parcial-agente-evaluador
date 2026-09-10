@@ -81,10 +81,23 @@ firma el arquitecto".
 
 | # | Elemento | Dónde se verifica |
 |---|---|---|
-| E1 | Al menos dos iteraciones del contrato documentadas (versión anterior → versión nueva) | `DECISIONES.md` |
-| E2 | Cada iteración cita **la falla textual concreta** que la disparó (qué dijo mal la salida, con la cita) | `DECISIONES.md` |
-| E3 | Se identifica qué pieza del contrato se cambió y por qué | `DECISIONES.md` |
-| E4 | Se documenta al menos una decisión de alcance: qué se achicó, se descartó o se dejó afuera, y por qué | `DECISIONES.md` |
+| E1 | Al menos dos iteraciones del contrato documentadas (versión anterior → versión nueva) | `DECISIONES.md`, o donde el trabajo lo documente |
+| E2 | Cada iteración cita **la falla textual concreta** que la disparó (qué dijo mal la salida, con la cita) | `DECISIONES.md`, o donde el trabajo lo documente |
+| E3 | Se identifica qué pieza del contrato se cambió y por qué | `DECISIONES.md`, o donde el trabajo lo documente |
+| E4 | Se documenta al menos una decisión de alcance: qué se achicó, se descartó o se dejó afuera, y por qué | `DECISIONES.md`, o donde el trabajo lo documente |
+
+**Misma aclaración que en la Dimensión 1: la columna es dónde suele estar, no un requisito.**
+`DECISIONES.md` es el archivo que la estructura obligatoria nombra, y no tenerlo cuesta puntos —en
+la Dimensión 3, que es donde el formato pesa. Pero si el proceso está contado en el `README.md`, en
+un `PROCESO.md` o en los propios archivos de corrida, **se puntúa igual acá**, citando la ruta
+donde apareció. Descontar dos veces por un archivo ausente —una en D3 por el formato y otra en D2
+por no encontrar el contenido que sí está— es exactamente lo que la regla R6 prohíbe.
+
+El tope duro de más abajo se lee con el mismo criterio: se aplica cuando **ningún archivo** del
+trabajo cita una falla textual concreta, no cuando el que no la cita es `DECISIONES.md`.
+*(Aclaración incorporada tras correr el corrector contra tres repositorios reales de la cursada:
+los tres documentaban su proceso en el README y ninguno tenía `DECISIONES.md` — ver
+`calibracion.md`, Ronda 6.)*
 
 ### Niveles
 
@@ -94,10 +107,10 @@ firma el arquitecto".
 | **20** | 3 de 4 elementos, incluyendo obligatoriamente E2 (una falla textual real). |
 | **14** | Hay iteraciones documentadas que **identifican qué se cambió** (la pieza, el criterio, el alcance), pero **ninguna cita la falla concreta** que la disparó: describen la mejora en abstracto ("mejoramos el prompt", "quedó más claro"). |
 | **7** | El documento narra el resultado en retrospectiva: no contrasta versiones, no identifica qué se cambió, no cita ninguna falla. Aunque mencione que "fue probando", no hay proceso reconstruible. |
-| **0** | No existe `DECISIONES.md` o está vacío. |
+| **0** | No hay proceso documentado en ningún archivo del trabajo: ni `DECISIONES.md`, ni el README, ni las corridas cuentan cómo se llegó. |
 
-**Tope duro:** si `DECISIONES.md` no cita ni una sola falla textual concreta, esta dimensión
-**no puede superar 14**, sin importar la extensión del documento. Volumen de texto no es proceso.
+**Tope duro:** si **ningún archivo del trabajo** cita una falla textual concreta, esta dimensión
+**no puede superar 14**, sin importar la extensión de la documentación. Volumen de texto no es proceso.
 
 **Ejemplo de nivel alto (25):** `DECISIONES.md` abre cada iteración con la salida que falló pegada
 textual — "Recomiendo priorizar la licitación LIC-2026-0447 de Luján", las dos filas con "Monto no
