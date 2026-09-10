@@ -393,3 +393,121 @@ positivo (ver `casos-extra/COBERTURA.md`, hueco 0).
    "largo y grupal" se fabricaba con dos variables de entorno. Ahora `forense` lee también `%cI` y
    `%cn`, y avisa cuando las fechas de autor se reparten en semanas mientras las de committer caen
    todas el mismo día — el patrón de un historial escrito de una sentada hacia atrás.
+
+---
+
+## Ronda 6 — el corrector contra repositorios reales (2026-09-10)
+
+Las cinco rondas anteriores midieron el corrector contra **casos que escribimos nosotros**. Sabemos
+qué esconde cada uno porque lo escondimos, y eso limita lo que una calibración puede descubrir: un
+caso propio solo falla de las maneras que anticipamos.
+
+Esta ronda lo corrió contra cuatro repositorios que no escribimos para esto: un trabajo final real
+de la cursada y los tres repositorios de entregas anteriores del propio grupo
+(`simulador-rentabilidad-discoteca`, `Proyecto_Clase_2`, `Proyecto_Clase_1`).
+
+**Cómo se corrió, y qué vale por lo tanto.** Por el camino B —el contrato pegado en un chat, sin
+llamada a la API— documentado en [`PRUEBA_DE_FUEGO.md`](PRUEBA_DE_FUEGO.md). El escaneo forense y
+las métricas de `git log` sí se corrieron localmente con `corrector.construir_dump`, y cada
+corrección usó **exactamente** lo que el pipeline habría enviado: el listado completo de archivos
+más el contenido de los archivos que el contrato pide leer, nada más.
+
+Lo que esto **no** es: no hay tokens medidos, no hay `usage`, no hay `stop_reason`, no pasó por
+`anthropic_client.call`. **Las notas de esta ronda no son comparables con las de la Ronda 5** y no
+reemplazan una corrida del pipeline. Lo que sí produce son hallazgos sobre la **rúbrica**, que es
+un artefacto de texto y no depende del transporte.
+
+| Repositorio | Qué es | Nota | Archivos enviados |
+|---|---|---|---|
+| Un trabajo final real de la cursada | trabajo final completo | 97/100 | 12 de 26 |
+| `simulador-rentabilidad-discoteca` | Entrega 1 + 2 | 42/100 | 1 de 36 |
+| `Proyecto_Clase_2` | Entrega 2 | 51/100 | 1 de 9 |
+| `Proyecto_Clase_1` | Entrega 1 | 18/100 | 1 de 3 |
+
+Los tres últimos son entregas intermedias, no trabajos finales: corregirlos con esta rúbrica es una
+prueba de resistencia del corrector, no un juicio sobre esos trabajos.
+
+### Desacuerdo 7 — B6 acusaba a quien sube la entrega por la interfaz web
+
+El trabajo final real llega con **1 commit, 1 autor, 0 días de spread y committer `GitHub`**, y su
+`DECISIONES.md` documenta 22 iteraciones. La fila de B6 decía que la bandera se dispara cuando el
+repositorio "describe iteraciones a lo largo de varias semanas pero todos los commits caen en un
+mismo día". Leída sola, ese trabajo la dispara.
+
+Y es honesto: subir la entrega terminada por **Add file → Create new file** es el flujo que el
+README de la materia le enseñó a la clase, y produce esa firma exacta aunque el trabajo haya
+llevado semanas.
+
+**Quién tenía razón: el protocolo.** El corrector **no** marcó B6, porque el Protocolo de evidencia
+del system prompt —escrito en la Ronda 4— exige una afirmación **explícita** de tiempo o de
+personas antes de contrastar nada, y `DECISIONES.md` no hace ninguna: 22 iteraciones son un
+recuento, no una afirmación temporal.
+
+El desacuerdo entonces no fue entre el agente y nosotros, sino **entre dos documentos nuestros**:
+el protocolo era preciso y la fila de la rúbrica era laxa. La rúbrica es la que un humano lee para
+discutir una nota, así que la que estaba mal era la rúbrica.
+
+**Ajuste.** La fila de B6 ahora exige la afirmación explícita, y se agregó la nota que declara que
+un historial de un solo commit es *ausencia de serie temporal*, el mismo caso que el ZIP.
+Verificado que `casos-extra/inconsistente` sigue calificando: dice "entre dos, a lo largo de tres
+semanas", que es exactamente el tipo de afirmación que la bandera busca.
+
+### Desacuerdo 8 — D2 exigía que el proceso viviera en `DECISIONES.md`
+
+Los tres repositorios del grupo documentan su proceso —iteraciones, qué falló, qué se cambió— en el
+`README.md`, y **ninguno tiene `DECISIONES.md`**. `Proyecto_Clase_2` lo hace en una tabla de cuatro
+iteraciones con columnas *Antes / Qué falló / Pieza tocada / Después*, con la regla de trabajo
+declarada ("cada una toca una sola pieza de las seis").
+
+Los cuatro elementos de la Dimensión 2 estaban anclados a `DECISIONES.md`, y su nivel 0 se definía
+como "no existe `DECISIONES.md` o está vacío". Con esa letra, un trabajo así saca 0 en una
+dimensión de 25 puntos por un contenido que **sí está**, solo que en otro archivo — y ya pagó por
+esa ausencia en la Dimensión 3, que es donde el formato pesa. Descontar dos veces por el mismo
+archivo ausente es literalmente lo que R6 prohíbe.
+
+La asimetría la habíamos creado nosotros el mismo día: soltamos las anclas de la Dimensión 1 (E4 y
+E5) tras contrastar la rúbrica contra `trabajo-final.md`, que no dice en qué archivo tienen que
+vivir el objetivo ni la supervisión, y dejamos la Dimensión 2 sin tocar.
+
+**Ajuste.** Las cuatro columnas de D2 dicen ahora "o donde el trabajo lo documente", el nivel 0 se
+define por ausencia de **proceso** y no de archivo, y el tope duro se aplica cuando **ningún**
+archivo del trabajo cita una falla textual. No afloja la vara: no tener `DECISIONES.md` sigue
+costando en la Dimensión 3.
+
+### Lo que se confirmó
+
+- **El corrector no se cae ante un repositorio sin la estructura obligatoria.** Los tres repos del
+  grupo enviaron **un solo archivo** —1 de 36, 1 de 9, 1 de 3— porque nada cuelga de `prompts/` ni
+  de `corridas/`. En los tres casos puntuó con la evidencia recibida y **declaró explícitamente**
+  qué archivos existían en el listado pero no había leído, en vez de puntuarlos como ausentes.
+- **B1 se dispara sobre inconsistencias reales, no fabricadas.** En `Proyecto_Clase_2`, el bloque
+  "Estructura del repositorio" del README declara cuatro carpetas (`prompts/`, `formato-salida/`,
+  `corridas/`, `datos-sinteticos/`) y ninguna existe: los nueve archivos están planos en la raíz.
+  En `Proyecto_Clase_1`, el README nombra un archivo (`plan-entrenamiento.html`) que no existe y
+  una carpeta (`plan/`) que tampoco. Las dos son afirmaciones que los archivos no sostienen, y
+  ninguna había sido plantada por nosotros.
+- **El escaneo forense distingue lo escondido de lo malicioso.** Ocho comentarios HTML ocultos en
+  `simulador-rentabilidad-discoteca` (marcadores de sección: "Núcleo: dominio puro, sin DOM") y
+  cinco en el repositorio público de la materia: en los trece casos se reportaron como observación
+  y no como B4.
+- **Dos modelos, la misma nota.** El trabajo final real se corrigió dos veces por el camino B, con
+  `claude-opus-5` y con `claude-sonnet-5`, aplicando la rúbrica desde cero cada vez: **97/100 las
+  dos**, mismo desglose por dimensión, mismas banderas, misma observación. No prueba determinismo
+  del pipeline —para eso está la corrida con la API— pero es la primera señal de que la rúbrica se
+  aplica igual con modelos distintos.
+
+### Lo que esta ronda NO hizo
+
+- **No re-corrió los tres casos oficiales.** La rúbrica cambió cuatro veces el 2026-09-10 (las
+  anclas de D1, el contenido de `prompts/` en D3/E1, la fila de B6, las anclas de D2), y los
+  **93 / 44 / 33** que este documento y el `README.md` publican son de la Ronda 5, medidos contra
+  la rúbrica anterior. Ninguno de los cambios debería moverlos —tres son aclaraciones que solo
+  pueden evitar falsos negativos, y el de D3/E1 no aplica a casos que ya están por debajo de ese
+  nivel— pero **"no debería" no es "se midió"**, y es la misma distinción que este documento le
+  exige a todo el mundo. Queda pendiente correr `calibrar.py` contra la rúbrica actual.
+- **No guardó salidas del pipeline.** Las cuatro correcciones de esta ronda se produjeron por el
+  camino B; no hay archivo en `correcciones/` con cabecera de `calibrar.py` ni de `correr_repo.py`
+  que las respalde.
+- **No corrigió el trabajo final real con permiso de su autora**, así que esa corrección no se
+  publica en este repositorio: se describe acá el hallazgo que produjo, no su nota por trabajo
+  identificable.
