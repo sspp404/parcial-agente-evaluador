@@ -36,7 +36,26 @@
   details{margin-top:12px}
   summary{cursor:pointer;font-size:13px;color:var(--muted)}
   #log{font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;background:var(--code);border-radius:7px;padding:12px;max-height:260px;overflow:auto;margin-top:12px}
-  #out{white-space:pre-wrap;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);border-radius:7px;padding:16px;overflow-x:auto}
+  #out{overflow-x:auto}
+  #raw{white-space:pre-wrap;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);border-radius:7px;padding:16px;overflow-x:auto;margin-top:12px}
+  .score{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+  .score .n{font-size:44px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .score .band{font-size:14px;color:var(--muted)}
+  #out h1{font-size:19px;margin:0 0 14px}
+  #out h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:26px 0 10px;font-weight:700}
+  #out table{border-collapse:collapse;width:100%;font-size:13.5px;margin:0 0 6px}
+  #out th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--line);padding:0 10px 7px 0;font-weight:700}
+  #out td{border-bottom:1px solid var(--line);padding:11px 10px 11px 0;vertical-align:top;line-height:1.5}
+  #out td:first-child{font-weight:600;white-space:nowrap;padding-right:16px}
+  #out td.pts{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;padding-right:16px}
+  #out p{margin:0 0 11px;font-size:14px;line-height:1.6}
+  #out ul{margin:0 0 11px;padding-left:20px;font-size:14px}
+  #out li{margin-bottom:7px;line-height:1.55}
+  #out code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.88em}
+  .flag{border-left:3px solid var(--warn);background:var(--code);padding:10px 14px;border-radius:0 7px 7px 0;margin-bottom:9px;font-size:13.5px;line-height:1.55}
+  .flag.none{border-left-color:var(--ok)}
+  .sug{border-left:3px solid var(--accent);background:var(--code);padding:12px 15px;border-radius:0 7px 7px 0;font-size:14px;line-height:1.6}
+  .traza{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:11px;margin-top:20px}
   .stat{display:flex;gap:22px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:10px}
   .stat b{color:var(--ink);font-variant-numeric:tabular-nums}
   .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
@@ -88,13 +107,17 @@
     </div>
     <button id="go">Corregir</button>
     <button id="dl" class="sec" hidden>Descargar salida cruda</button>
+    <button id="cp" class="sec" hidden>Copiar</button>
     <div id="err"></div>
     <div id="run">Corrigiendo… puede tardar dos minutos. El detalle va apareciendo abajo.</div>
     <div id="stat" class="stat"></div>
     <details id="det"><summary>Detalle de la corrida</summary><div id="log">esperando…</div></details>
   </div>
 
-  <div class="panel" id="outwrap" hidden><div id="out"></div></div>
+  <div class="panel" id="outwrap" hidden>
+    <div id="out"></div>
+    <details id="rawwrap"><summary>Ver el markdown crudo (para pegar en el repo)</summary><div id="raw"></div></details>
+  </div>
 </div>
 
 <script>
@@ -223,10 +246,94 @@ const raw = async (o,r,b,p) => {
   return res.ok ? res.text() : null;
 };
 
+
+/* ---------- render de la corrección ---------------------------------------
+   El formato de salida es fijo (lo define agente/system_prompt.md), así que no
+   hace falta un parser de markdown entero ni una librería de CDN que pueda no
+   cargar en el wifi de la facultad. Esto cubre lo que el contrato emite:
+   títulos, una tabla, listas, negrita y código inline.
+
+   TODO se escapa antes de transformarse: la corrección cita texto del
+   repositorio evaluado —incluidos los comentarios HTML que la bandera B4
+   denuncia—, así que insertarlo sin escapar convertiría a este panel en el
+   vehículo de la inyección que está reportando. */
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const inline = s => esc(s)
+  .replace(/`([^`]+)`/g, "<code>$1</code>")
+  .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+  .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
+
+const celdas = l => l.replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+const esSeparador = l => /^\|[\s:|-]+\|$/.test(l.trim());
+
+function pintarPuntaje(txt){
+  // "18/30" → color por proporción, para que la tabla se lea de un vistazo
+  const m = txt.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (!m) return esc(txt);
+  const r = +m[1] / +m[2];
+  const cls = r >= .8 ? "ok" : r >= .5 ? "warn" : "bad";
+  return `<span class="${cls}">${esc(txt)}</span>`;
+}
+
+function render(md){
+  const L = md.split("\n");
+  let out = "", i = 0, seccion = "";
+  while (i < L.length){
+    const l = L[i];
+
+    if (/^#\s/.test(l)){ out += `<h1>${inline(l.slice(2))}</h1>`; i++; continue; }
+    if (/^##\s/.test(l)){
+      seccion = l.slice(3).trim().toLowerCase();
+      out += `<h2>${inline(l.slice(3))}</h2>`; i++; continue;
+    }
+    // el puntaje total, destacado
+    const tot = l.match(/^\*\*Puntaje total:\s*(\d+)\/(\d+)\s*—\s*(.+?)\*\*$/);
+    if (tot){
+      out += `<div class="score"><span class="n">${tot[1]}<span style="font-size:20px;color:var(--muted)">/${tot[2]}</span></span><span class="band">${inline(tot[3])}</span></div>`;
+      i++; continue;
+    }
+    // tabla
+    if (l.trim().startsWith("|") && L[i+1] && esSeparador(L[i+1])){
+      const head = celdas(l); i += 2;
+      let filas = "";
+      while (i < L.length && L[i].trim().startsWith("|")){
+        const c = celdas(L[i]);
+        filas += "<tr>" + c.map((x,k) => {
+          const esPts = /^\d+\s*\/\s*\d+$/.test(x);
+          return `<td class="${esPts ? "pts" : ""}">${esPts ? pintarPuntaje(x) : inline(x)}</td>`;
+        }).join("") + "</tr>";
+        i++;
+      }
+      out += `<table><thead><tr>${head.map(h=>`<th>${inline(h)}</th>`).join("")}</tr></thead><tbody>${filas}</tbody></table>`;
+      continue;
+    }
+    // lista
+    if (/^[-*]\s/.test(l.trim())){
+      let items = "";
+      while (i < L.length && /^[-*]\s/.test(L[i].trim())){
+        let txt = L[i].trim().slice(2);
+        while (i+1 < L.length && L[i+1].trim() && !/^[-*#|]/.test(L[i+1].trim())){ i++; txt += " " + L[i].trim(); }
+        items += `<li>${inline(txt)}</li>`; i++;
+      }
+      out += `<ul>${items}</ul>`; continue;
+    }
+    if (!l.trim()){ i++; continue; }
+    // párrafo (junta líneas seguidas)
+    let par = l.trim();
+    while (i+1 < L.length && L[i+1].trim() && !/^[-*#|]/.test(L[i+1].trim()) && !/^\*\*Puntaje total/.test(L[i+1])){ i++; par += " " + L[i].trim(); }
+    i++;
+    const cls = seccion.includes("bandera") ? (/^ninguna/i.test(par) ? "flag none" : "flag")
+              : seccion.includes("sugerencia") ? "sug"
+              : seccion.includes("trazabilidad") ? "traza" : "";
+    out += cls ? `<div class="${cls}">${inline(par)}</div>` : `<p>${inline(par)}</p>`;
+  }
+  return out;
+}
+
 /* ---------- corrida ------------------------------------------------------- */
 $("go").onclick = async () => {
   const btn = $("go"); btn.disabled = true;
-  $("log").textContent = ""; $("stat").textContent = ""; $("outwrap").hidden = true; $("dl").hidden = true;
+  $("log").textContent = ""; $("stat").textContent = ""; $("outwrap").hidden = true; $("dl").hidden = true; $("cp").hidden = true;
   $("err").style.display = "none"; $("run").style.display = "block"; $("det").open = true;
   const t0 = performance.now();
   try{
@@ -408,11 +515,15 @@ Corregí este trabajo aplicando la rúbrica completa. Devolvé la corrección en
       `<span>tiempo <b>${segs.toFixed(1)}s</b></span>`+
       `<span>alertas <b class="${alertas.length?"warn":"ok"}">${alertas.length}</b></span>`;
 
-    $("out").textContent = texto;
+    $("out").innerHTML = render(texto);
+    $("raw").textContent = texto;
     $("outwrap").hidden = false;
 
     const cabecera = `<!-- generado por corrector.html (sin servidor) · repo=${owner}/${repo}\n     fecha de corrección=${fecha} · modelo=${modelo}\n     archivos en el repo=${todos.length} · contenido enviado=${count}\n     tokens in=${u.input_tokens||0} (cache=${u.cache_read_input_tokens||0}) out=${u.output_tokens||0} · ${segs.toFixed(1)}s\n     costo estimado=USD ${costo.toFixed(4)}\n     stop_reason=${data.stop_reason}\n     SALIDA SIN EDITAR -->\n\n`;
     const blob = new Blob([cabecera + texto], {type:"text/markdown"});
+    const cp = $("cp");
+    cp.hidden = false;
+    cp.onclick = async () => { await navigator.clipboard.writeText(texto); cp.textContent = "Copiado ✓"; setTimeout(()=>cp.textContent="Copiar", 1600); };
     const dl = $("dl");
     dl.hidden = false;
     dl.onclick = () => {
