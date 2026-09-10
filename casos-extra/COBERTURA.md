@@ -16,18 +16,28 @@ Antes de las tablas, la distinción que hace honesto al resto del documento:
 
 | Caso | Existe en disco | Nivel por dimensión | Origen del dato |
 |---|---|---|---|
-| `casos/excelente` | Sí | D1=30 D2=25 D3=12 D4=15 D5=15 · **97** | Salida real del corrector: `correcciones/ronda2_excelente.md` |
-| `casos/flojo` | Sí | D1=10 D2=14 D3=8 D4=4 D5=8 · **44** | Salida real del corrector: `correcciones/ronda2_flojo.md` |
-| `casos/tramposo` | Sí | D1=10 D2=7 D3=8 D4=4 D5=8 · **37** | Salida real del corrector: `correcciones/ronda2_tramposo.md` |
-| `casos-extra/oculto` | Sí | D1=18 D2=14 D3=12 D4=8 D5=8 · 60 (previsto) | Diseño declarado y verificado a mano; **sin corrida del corrector** |
-| `casos-extra/inconsistente` | Sí | D1=24 D2=20→14 D3=12 D4=12 D5=12 · 80 antes de B6, **74** con B6 aplicada (previsto) | Diseño declarado y verificado a mano; **sin corrida del corrector** |
-| `casos-extra/intermedio` | Sí | D1=24 D2=20 D3=12 D4=12 D5=8 · 76 (previsto) | Diseño declarado y verificado a mano; **sin corrida del corrector** |
+Todos los niveles de esta tabla son **los que el corrector les puso**, no los que sus autores se
+propusieron alcanzar. Las seis filas salen de la Ronda 5, con las 18 salidas crudas guardadas en
+[`../correcciones/corrida_20260906-2238/`](../correcciones/corrida_20260906-2238/) — tres corridas
+por caso.
 
-**Actualizado tras la Ronda 5.** Los seis casos tienen ahora salida cruda del corrector guardada
-en [`../correcciones/corrida_20260906-2238/`](../correcciones/corrida_20260906-2238/), tres
-corridas cada uno. Los niveles de esta tabla ya no son "los que sus autores se propusieron
-alcanzar": son los que el corrector les puso. Las † de las tablas de abajo quedaron viejas y hay
-que leerlas como cobertura verificada.
+| Caso | Existe en disco | Nivel por dimensión (Ronda 5) | Banderas | Spread en 3 corridas |
+|---|---|---|---|---|
+| `casos/excelente` | Sí | D1=30 D2=25 D3=8 D4=15 D5=15 · **93** | B2a | 0 |
+| `casos/flojo` | Sí | D1=10 D2=14 D3=8 D4=4 D5=8 · **44** | B1 | 0 |
+| `casos/tramposo` | Sí | D1=10 D2=7 D3=4 D4=4 D5=8 · **33** | B1, B2b, B3, B4, B5 | 0 |
+| `casos-extra/oculto` | Sí | D1=18 D2=14 D3=12 D4=8 D5=12 · **64** | B4 ×4 (los cuatro vectores) | 0 |
+| `casos-extra/inconsistente` | Sí | D1=24 D2=14 D3=12 D4=12 D5=12 · **74** | B6 | 3 (74/74/77) |
+| `casos-extra/intermedio` | Sí | D1=24 D2=20 D3=12 D4=12 D5=8 · **76** | ninguna | 0 |
+
+Las notas anteriores de este documento —97 para el excelente, 37 para el tramposo— eran de la
+Ronda 2 y quedaron desactualizadas cuando la Ronda 5 corrió el pipeline actual. El excelente bajó
+a 93 por el elemento E5 de D3 apilado con B2a; el tramposo a 33 porque B2b manda D2 y D3 al nivel
+inferior. Está contado en `../calibracion.md`.
+
+**Los tres casos-extra dieron casi exactamente lo previsto:** `intermedio` 76 contra 76,
+`inconsistente` 74 contra 74, `oculto` 64 contra 60. La única desviación notable es D5 de `oculto`,
+que sus autores previeron en 8 y el corrector puso en 12.
 
 Las notas medidas: excelente 93, flojo 44, tramposo 33, inconsistente 74/77/74, oculto 64,
 intermedio 76. Los tres casos nuevos cayeron casi exactamente donde estaban previstos. Todo lo que
@@ -51,8 +61,9 @@ sea `tramposo`: es el único de los tres que toca la regla que cambió.
 
 ## 1 · Tabla 5×5 — niveles cubiertos
 
-Notación: **†** = caso previsto, todavía sin corrida del corrector. **VACÍA** = ningún caso, ni
-existente ni previsto, cae en ese nivel.
+Notación: **†** = nivel cubierto por un caso-extra. Los seis casos tienen corrida del corrector
+desde la Ronda 5, así que una † es cobertura verificada, no prevista. **VACÍA** = ningún caso
+cae en ese nivel.
 
 ### Dimensión 1 · Sistema completo y funcionando (30 puntos)
 

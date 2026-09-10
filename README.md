@@ -174,6 +174,39 @@ ejercitan:
 El mapa de qué nivel de la rúbrica tiene caso y cuál no está en
 [`casos-extra/COBERTURA.md`](casos-extra/COBERTURA.md), con los huecos declarados uno por uno.
 
+### Y corre sobre repositorios reales, no solo sobre los casos que escribimos
+
+Seis casos propios solo fallan de las maneras que anticipamos. Para atacar eso, el corrector se
+corrió contra **cuatro repositorios reales de la cursada** que nadie escribió para esto: un trabajo
+final completo y los tres repos de entregas anteriores del propio grupo. Las salidas están en
+[`correcciones/ronda6-repos-reales/`](correcciones/ronda6-repos-reales/).
+
+| Repositorio | Qué es | Nota | Archivos que recibió |
+|---|---|---|---|
+| Un trabajo final real de la cursada | trabajo final completo | 97/100 | 12 de 26 |
+| `simulador-rentabilidad-discoteca` | Entrega 1 + 2 | 42/100 | **1 de 36** |
+| `Proyecto_Clase_2` | Entrega 2 | 51/100 | **1 de 9** |
+| `Proyecto_Clase_1` | Entrega 1 | 18/100 | **1 de 3** |
+
+Los tres últimos son entregas intermedias, no trabajos finales: corregirlos con esta rúbrica es una
+prueba de resistencia, no un juicio sobre esos trabajos. Y ahí está lo que importa — **ninguno
+tiene la estructura obligatoria, así que el corrector recibió un solo archivo de cada uno** y aun
+así puntuó las cinco dimensiones citando evidencia, declarando explícitamente qué archivos existían
+en el listado y no había leído en vez de puntuarlos como ausentes. Es el camino que va a recorrer
+buena parte de los trabajos en la prueba de fuego, y ninguno de nuestros seis casos lo ejercita.
+
+Encontró además **dos banderas B1 que nadie plantó**, las dos en repositorios nuestros:
+`Proyecto_Clase_2` declara en su README cuatro carpetas que no existen —los nueve archivos están
+planos en la raíz— y `Proyecto_Clase_1` nombra un archivo y una carpeta que tampoco.
+
+Esta ronda es la que produjo los dos arreglos de rúbrica más importantes del repositorio: que **B6
+dejara de acusar a quien sube la entrega por la interfaz web de GitHub**, y que **D2 dejara de
+exigir que el proceso viviera en `DECISIONES.md`**. Los dos están en
+[`calibracion.md`](calibracion.md), Ronda 6, con los desacuerdos 7 y 8.
+
+La corrección del trabajo final real **no se publica acá**: es el trabajo de una compañera, con su
+nombre, y su entrega no había cerrado. El hallazgo que produjo está documentado; su nota, no.
+
 ## Qué falta o qué falló
 
 - **La rúbrica cambió cuatro veces el 2026-09-10 y el pipeline no se volvió a correr.** Se verificó
